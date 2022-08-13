@@ -150,12 +150,8 @@ struct net_wifi_mgmt_offload {
  */
 BUILD_ASSERT(offsetof(struct net_wifi_mgmt_offload, iface_api) == 0);
 
-#ifdef CONFIG_WIFI_OFFLOAD
-
 void wifi_mgmt_raise_connect_result_event(struct net_if *iface, int status);
 void wifi_mgmt_raise_disconnect_result_event(struct net_if *iface, int status);
-
-#endif /* CONFIG_WIFI_OFFLOAD */
 
 #ifdef __cplusplus
 }
