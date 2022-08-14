@@ -197,3 +197,30 @@ void wifi_mgmt_raise_iface_status_event(struct net_if *iface,
 					iface, &iface_status,
 					sizeof(struct wifi_iface_status));
 }
+
+#ifdef CONFIG_NET_STATISTICS_WIFI
+static int wifi_iface_stats(uint32_t mgmt_request, struct net_if *iface,
+			  void *data, size_t len)
+{
+	void *src = NULL;
+	const struct device *dev = net_if_get_device(iface);
+	struct net_wifi_mgmt_offload *off_api =
+		(struct net_wifi_mgmt_offload *) dev->api;
+
+	if (off_api == NULL || off_api->get_stats == NULL) {
+		return -ENOTSUP;
+	}
+
+	src = off_api->get_stats(dev);
+
+	if (len != sizeof(struct net_stats_wifi) || !src)
+		return -EINVAL;
+
+	memcpy(data, src, len);
+
+	k_free(src);
+
+	return 0;
+}
+NET_MGMT_REGISTER_REQUEST_HANDLER(NET_REQUEST_STATS_GET_WIFI, wifi_iface_stats);
+#endif
