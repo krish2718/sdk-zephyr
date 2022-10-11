@@ -106,20 +106,20 @@ static inline void dcache_clean(uint32_t addr, uint32_t size)
  */
 /* No need to verify things for unit tests */
 #if !defined(CONFIG_NET_TEST)
-#if CONFIG_NET_BUF_DATA_SIZE * CONFIG_ETH_SAM_GMAC_BUF_RX_COUNT \
+#if 1100 * CONFIG_ETH_SAM_GMAC_BUF_RX_COUNT \
 	< GMAC_FRAME_SIZE_MAX
-#error CONFIG_NET_BUF_DATA_SIZE * CONFIG_ETH_SAM_GMAC_BUF_RX_COUNT is \
+#error 1100 * CONFIG_ETH_SAM_GMAC_BUF_RX_COUNT is \
 	not large enough to hold a full frame
 #endif
 
-#if CONFIG_NET_BUF_DATA_SIZE * (CONFIG_NET_BUF_RX_COUNT - \
+#if 1100 * (CONFIG_NET_BUF_RX_COUNT - \
 	CONFIG_ETH_SAM_GMAC_BUF_RX_COUNT) < GMAC_FRAME_SIZE_MAX
 #error (CONFIG_NET_BUF_RX_COUNT - CONFIG_ETH_SAM_GMAC_BUF_RX_COUNT) * \
-	CONFIG_NET_BUF_DATA_SIZE are not large enough to hold a full frame
+	1100 are not large enough to hold a full frame
 #endif
 
-#if CONFIG_NET_BUF_DATA_SIZE & 0x3F
-#pragma message "CONFIG_NET_BUF_DATA_SIZE should be a multiple of 64 bytes " \
+#if 1100 & 0x3F
+#pragma message "1100 should be a multiple of 64 bytes " \
 	"due to the granularity of RX DMA"
 #endif
 
@@ -296,7 +296,7 @@ static int priority_queue_init(Gmac *gmac, struct gmac_queue *queue)
 
 	/* Setup RX buffer size for DMA */
 	gmac->GMAC_RBSRPQ[queue_index] =
-		GMAC_RBSRPQ_RBS(CONFIG_NET_BUF_DATA_SIZE >> 6);
+		GMAC_RBSRPQ_RBS(1100 >> 6);
 
 	/* Set Receive Buffer Queue Pointer Register */
 	gmac->GMAC_RBQBAPQ[queue_index] = (uint32_t)queue->rx_desc_list.buf;
@@ -488,7 +488,7 @@ static int rx_descriptors_init(Gmac *gmac, struct gmac_queue *queue)
 		rx_buf_addr = rx_buf->data;
 		__ASSERT(!((uint32_t)rx_buf_addr & ~GMAC_RXW0_ADDR),
 			 "Misaligned RX buffer address");
-		__ASSERT(rx_buf->size == CONFIG_NET_BUF_DATA_SIZE,
+		__ASSERT(rx_buf->size == 1100,
 			 "Incorrect length of RX data buffer");
 		/* Give ownership to GMAC and remove the wrap bit */
 		rx_desc_list->buf[i].w0 = (uint32_t)rx_buf_addr & GMAC_RXW0_ADDR;
@@ -1215,7 +1215,7 @@ static int nonpriority_queue_init(Gmac *gmac, struct gmac_queue *queue)
 	/* Configure GMAC DMA transfer */
 	gmac->GMAC_DCFGR =
 		/* Receive Buffer Size (defined in multiples of 64 bytes) */
-		GMAC_DCFGR_DRBS(CONFIG_NET_BUF_DATA_SIZE >> 6) |
+		GMAC_DCFGR_DRBS(1100 >> 6) |
 		/* Attempt to use INCR4 AHB bursts (Default) */
 		GMAC_DCFGR_FBLDO_INCR4 |
 		/* DMA Queue Flags */
@@ -1296,7 +1296,7 @@ static struct net_pkt *frame_get(struct gmac_queue *queue)
 		if (frame_is_complete) {
 			frag_len = (rx_desc->w1 & GMAC_RXW1_LEN) - frame_len;
 		} else {
-			frag_len = CONFIG_NET_BUF_DATA_SIZE;
+			frag_len = 1100;
 		}
 
 		frame_len += frag_len;

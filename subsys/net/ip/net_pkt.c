@@ -83,7 +83,7 @@ LOG_MODULE_REGISTER(net_pkt, CONFIG_NET_PKT_LOG_LEVEL);
 /* Make sure that IP + TCP/UDP/ICMP headers fit into one fragment. This
  * makes possible to cast a fragment pointer to protocol header struct.
  */
-#if CONFIG_NET_BUF_DATA_SIZE < (MAX_IP_PROTO_LEN + MAX_NEXT_PROTO_LEN)
+#if 1100 < (MAX_IP_PROTO_LEN + MAX_NEXT_PROTO_LEN)
 #if defined(STRING2)
 #undef STRING2
 #endif
@@ -92,7 +92,7 @@ LOG_MODULE_REGISTER(net_pkt, CONFIG_NET_PKT_LOG_LEVEL);
 #endif
 #define STRING2(x) #x
 #define STRING(x) STRING2(x)
-#pragma message "Data len " STRING(CONFIG_NET_BUF_DATA_SIZE)
+#pragma message "Data len " STRING(1100)
 #pragma message "Minimum len " STRING(MAX_IP_PROTO_LEN + MAX_NEXT_PROTO_LEN)
 #error "Too small net_buf fragment size"
 #endif
@@ -119,9 +119,9 @@ K_MEM_SLAB_DEFINE(tx_pkts, sizeof(struct net_pkt), CONFIG_NET_PKT_TX_COUNT, 4);
 #if defined(CONFIG_NET_BUF_FIXED_DATA_SIZE)
 
 NET_BUF_POOL_FIXED_DEFINE(rx_bufs, CONFIG_NET_BUF_RX_COUNT,
-			  CONFIG_NET_BUF_DATA_SIZE, 4, NULL);
+			  1100, 4, NULL);
 NET_BUF_POOL_FIXED_DEFINE(tx_bufs, CONFIG_NET_BUF_TX_COUNT,
-			  CONFIG_NET_BUF_DATA_SIZE, 4, NULL);
+			  1100, 4, NULL);
 
 #else /* !CONFIG_NET_BUF_FIXED_DATA_SIZE */
 

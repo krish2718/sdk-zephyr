@@ -1310,7 +1310,7 @@ static inline bool net_pkt_filter_recv_ok(struct net_pkt *pkt)
  * @param count Number of net_buf in this pool.
  */
 #define NET_PKT_DATA_POOL_DEFINE(name, count)				\
-	NET_BUF_POOL_DEFINE(name, count, CONFIG_NET_BUF_DATA_SIZE,	\
+	NET_BUF_POOL_DEFINE(name, count, 1100,	\
 			    0, NULL)
 
 /** @cond INTERNAL_HIDDEN */

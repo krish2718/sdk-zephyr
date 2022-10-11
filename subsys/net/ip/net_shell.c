@@ -3657,7 +3657,7 @@ static int cmd_net_mem(const struct shell *shell, size_t argc, char *argv[])
 
 	net_pkt_get_info(&rx, &tx, &rx_data, &tx_data);
 
-	PR("Fragment length %d bytes\n", CONFIG_NET_BUF_DATA_SIZE);
+	PR("Fragment length %d bytes\n", 1100);
 
 	PR("Network buffer pools:\n");
 

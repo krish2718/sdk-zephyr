@@ -924,7 +924,7 @@ ZTEST(net_pkt_test_suite, test_net_pkt_get_contiguous_len)
 	int res;
 	/* Allocate pkt with 2 fragments */
 	struct net_pkt *pkt = net_pkt_rx_alloc_with_buffer(
-					   NULL, CONFIG_NET_BUF_DATA_SIZE * 2,
+					   NULL, 1100 * 2,
 					   AF_UNSPEC, 0, K_NO_WAIT);
 
 	zassert_not_null(pkt, "Pkt not allocated");
@@ -932,7 +932,7 @@ ZTEST(net_pkt_test_suite, test_net_pkt_get_contiguous_len)
 	net_pkt_cursor_init(pkt);
 
 	cont_len = net_pkt_get_contiguous_len(pkt);
-	zassert_equal(CONFIG_NET_BUF_DATA_SIZE, cont_len,
+	zassert_equal(1100, cont_len,
 		      "Expected one complete available net_buf");
 
 	net_pkt_set_overwrite(pkt, false);
@@ -944,11 +944,11 @@ ZTEST(net_pkt_test_suite, test_net_pkt_get_contiguous_len)
 	}
 
 	cont_len = net_pkt_get_contiguous_len(pkt);
-	zassert_equal(CONFIG_NET_BUF_DATA_SIZE - 3, cont_len,
+	zassert_equal(1100 - 3, cont_len,
 		      "Expected a three byte reduction");
 
 	/* Fill the first fragment up until only 3 bytes are free */
-	for (int i = 0; i < CONFIG_NET_BUF_DATA_SIZE - 6; ++i) {
+	for (int i = 0; i < 1100 - 6; ++i) {
 		res = net_pkt_write_u8(pkt, 0xAA);
 		zassert_equal(0, res, "Write packet failed");
 	}
@@ -965,11 +965,11 @@ ZTEST(net_pkt_test_suite, test_net_pkt_get_contiguous_len)
 	}
 
 	cont_len = net_pkt_get_contiguous_len(pkt);
-	zassert_equal(CONFIG_NET_BUF_DATA_SIZE, cont_len,
+	zassert_equal(1100, cont_len,
 		      "Expected next full net_buf is available");
 
 	/* Fill the last fragment */
-	for (int i = 0; i < CONFIG_NET_BUF_DATA_SIZE; ++i) {
+	for (int i = 0; i < 1100; ++i) {
 		res = net_pkt_write_u8(pkt, 0xAA);
 		zassert_equal(0, res, "Write packet failed");
 	}
@@ -986,14 +986,14 @@ ZTEST(net_pkt_test_suite, test_net_pkt_remove_tail)
 	int err;
 
 	pkt = net_pkt_alloc_with_buffer(NULL,
-					CONFIG_NET_BUF_DATA_SIZE * 2 + 3,
+					1100 * 2 + 3,
 					AF_UNSPEC, 0, K_NO_WAIT);
 	zassert_true(pkt != NULL, "Pkt not allocated");
 
 	net_pkt_cursor_init(pkt);
-	net_pkt_write(pkt, small_buffer, CONFIG_NET_BUF_DATA_SIZE * 2 + 3);
+	net_pkt_write(pkt, small_buffer, 1100 * 2 + 3);
 
-	zassert_equal(net_pkt_get_len(pkt), CONFIG_NET_BUF_DATA_SIZE * 2 + 3,
+	zassert_equal(net_pkt_get_len(pkt), 1100 * 2 + 3,
 		      "Pkt length is invalid");
 	zassert_equal(pkt->frags->frags->frags->len, 3,
 		      "3rd buffer length is invalid");
@@ -1002,7 +1002,7 @@ ZTEST(net_pkt_test_suite, test_net_pkt_remove_tail)
 	err = net_pkt_remove_tail(pkt, 2);
 	zassert_equal(err, 0, "Failed to remove tail");
 
-	zassert_equal(net_pkt_get_len(pkt), CONFIG_NET_BUF_DATA_SIZE * 2 + 1,
+	zassert_equal(net_pkt_get_len(pkt), 1100 * 2 + 1,
 		      "Pkt length is invalid");
 	zassert_not_equal(pkt->frags->frags->frags, NULL,
 			  "3rd buffer was removed");
@@ -1013,51 +1013,51 @@ ZTEST(net_pkt_test_suite, test_net_pkt_remove_tail)
 	err = net_pkt_remove_tail(pkt, 1);
 	zassert_equal(err, 0, "Failed to remove tail");
 
-	zassert_equal(net_pkt_get_len(pkt), CONFIG_NET_BUF_DATA_SIZE * 2,
+	zassert_equal(net_pkt_get_len(pkt), 1100 * 2,
 		      "Pkt length is invalid");
 	zassert_equal(pkt->frags->frags->frags, NULL,
 		      "3rd buffer was not removed");
-	zassert_equal(pkt->frags->frags->len, CONFIG_NET_BUF_DATA_SIZE,
+	zassert_equal(pkt->frags->frags->len, 1100,
 		      "2nd buffer length is invalid");
 
 	/* Remove 2nd buffer and one byte from 1st buffer */
-	err = net_pkt_remove_tail(pkt, CONFIG_NET_BUF_DATA_SIZE + 1);
+	err = net_pkt_remove_tail(pkt, 1100 + 1);
 	zassert_equal(err, 0, "Failed to remove tail");
 
-	zassert_equal(net_pkt_get_len(pkt), CONFIG_NET_BUF_DATA_SIZE - 1,
+	zassert_equal(net_pkt_get_len(pkt), 1100 - 1,
 		      "Pkt length is invalid");
 	zassert_equal(pkt->frags->frags, NULL,
 		      "2nd buffer was not removed");
-	zassert_equal(pkt->frags->len, CONFIG_NET_BUF_DATA_SIZE - 1,
+	zassert_equal(pkt->frags->len, 1100 - 1,
 		      "1st buffer length is invalid");
 
 	net_pkt_unref(pkt);
 
 	pkt = net_pkt_rx_alloc_with_buffer(NULL,
-					   CONFIG_NET_BUF_DATA_SIZE * 2 + 3,
+					   1100 * 2 + 3,
 					   AF_UNSPEC, 0, K_NO_WAIT);
 
 	net_pkt_cursor_init(pkt);
-	net_pkt_write(pkt, small_buffer, CONFIG_NET_BUF_DATA_SIZE * 2 + 3);
+	net_pkt_write(pkt, small_buffer, 1100 * 2 + 3);
 
-	zassert_equal(net_pkt_get_len(pkt), CONFIG_NET_BUF_DATA_SIZE * 2 + 3,
+	zassert_equal(net_pkt_get_len(pkt), 1100 * 2 + 3,
 		      "Pkt length is invalid");
 	zassert_equal(pkt->frags->frags->frags->len, 3,
 		      "3rd buffer length is invalid");
 
 	/* Remove bytes spanning 3 buffers */
-	err = net_pkt_remove_tail(pkt, CONFIG_NET_BUF_DATA_SIZE + 5);
+	err = net_pkt_remove_tail(pkt, 1100 + 5);
 	zassert_equal(err, 0, "Failed to remove tail");
 
-	zassert_equal(net_pkt_get_len(pkt), CONFIG_NET_BUF_DATA_SIZE - 2,
+	zassert_equal(net_pkt_get_len(pkt), 1100 - 2,
 		      "Pkt length is invalid");
 	zassert_equal(pkt->frags->frags, NULL,
 		      "2nd buffer was not removed");
-	zassert_equal(pkt->frags->len, CONFIG_NET_BUF_DATA_SIZE - 2,
+	zassert_equal(pkt->frags->len, 1100 - 2,
 		      "1st buffer length is invalid");
 
 	/* Try to remove more bytes than packet has */
-	err = net_pkt_remove_tail(pkt, CONFIG_NET_BUF_DATA_SIZE);
+	err = net_pkt_remove_tail(pkt, 1100);
 	zassert_equal(err, -EINVAL,
 		      "Removing more bytes than available should fail");
 
@@ -1067,7 +1067,7 @@ ZTEST(net_pkt_test_suite, test_net_pkt_remove_tail)
 ZTEST(net_pkt_test_suite, test_net_pkt_shallow_clone_noleak_buf)
 {
 	const int bufs_to_allocate = 3;
-	const size_t pkt_size = CONFIG_NET_BUF_DATA_SIZE * bufs_to_allocate;
+	const size_t pkt_size = 1100 * bufs_to_allocate;
 	struct net_pkt *pkt, *shallow_pkt;
 	struct net_buf_pool *tx_data;
 
@@ -1100,10 +1100,10 @@ void test_net_pkt_shallow_clone_append_buf(int extra_frag_refcounts)
 	const int bufs_to_allocate = 3;
 	const int bufs_frag = 2;
 
-	zassert_true(bufs_frag + bufs_to_allocate < CONFIG_NET_BUF_DATA_SIZE,
+	zassert_true(bufs_frag + bufs_to_allocate < 1100,
 		     "Total bufs to allocate must less than available space");
 
-	const size_t pkt_size = CONFIG_NET_BUF_DATA_SIZE * bufs_to_allocate;
+	const size_t pkt_size = 1100 * bufs_to_allocate;
 
 	struct net_pkt *pkt, *shallow_pkt;
 	struct net_buf *frag_head;
@@ -1122,7 +1122,7 @@ void test_net_pkt_shallow_clone_append_buf(int extra_frag_refcounts)
 
 	/* allocate buffers for the frag */
 	for (int i = 0; i < bufs_frag; i++) {
-		frag = net_buf_alloc_len(tx_data, CONFIG_NET_BUF_DATA_SIZE, K_NO_WAIT);
+		frag = net_buf_alloc_len(tx_data, 1100, K_NO_WAIT);
 		zassert_true(frag != NULL, "Frag not allocated");
 		net_pkt_append_buffer(pkt, frag);
 		if (i == 0) {

@@ -38,7 +38,7 @@ static int tcp_window =
 #if (CONFIG_NET_TCP_MAX_RECV_WINDOW_SIZE != 0)
 	CONFIG_NET_TCP_MAX_RECV_WINDOW_SIZE;
 #else
-	(CONFIG_NET_BUF_RX_COUNT * CONFIG_NET_BUF_DATA_SIZE) / 3;
+	(CONFIG_NET_BUF_RX_COUNT * 1100) / 3;
 #endif
 #ifdef CONFIG_NET_TCP_RANDOMIZED_RTO
 #define TCP_RTO_MS (conn->rto)
@@ -1977,7 +1977,7 @@ static enum net_verdict tcp_in(struct tcp *conn, struct net_pkt *pkt)
 			 * while waiting acks.
 			 */
 			max_win = (CONFIG_NET_BUF_TX_COUNT *
-				   CONFIG_NET_BUF_DATA_SIZE) / 3;
+				   1100) / 3;
 		}
 
 		if (sndbuf_opt > 0) {
