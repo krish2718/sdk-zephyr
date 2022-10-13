@@ -13,8 +13,14 @@
 #ifdef CONFIG_NET_LOOPBACK_SIMULATE_PACKET_DROP
 #include <zephyr/net/loopback.h>
 #endif
+#include <nrfx_clock.h>
 void main(void)
 {
+#ifdef CLOCK_FEATURE_HFCLK_DIVIDE_PRESENT
+	/* For now hardcode to 128MHz */
+	nrfx_clock_divider_set(NRF_CLOCK_DOMAIN_HFCLK,
+			       NRF_CLOCK_HFCLK_DIV_1);
+#endif	
 #if defined(CONFIG_USB_DEVICE_STACK)
 	int ret;
 
