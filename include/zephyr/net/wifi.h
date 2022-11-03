@@ -245,4 +245,54 @@ static inline const char *wifi_link_mode_txt(enum wifi_link_mode link_mode)
 	}
 }
 
+enum wifi_ps_mode {
+	WIFI_PS_MODE_LEGACY = 0,
+	WIFI_PS_MODE_UAPSD,
+	WIFI_PS_MODE_TWT,
+};
+
+/**
+ * wifi_ps_mode_txt - Get the power save mode type as a text string
+ */
+static inline const char *wifi_ps_mode_txt(enum wifi_ps_mode ps_mode)
+{
+	switch (ps_mode) {
+	case WIFI_PS_MODE_LEGACY:
+		return "LEGACY";
+	case WIFI_PS_MODE_UAPSD:
+		return "UAPSD";
+	case WIFI_PS_MODE_TWT:
+		return "TWT";
+	case WIFI_PS_MODE_UNKNOWN:
+	default:
+		return "UNKNOWN";
+	}
+}
+
+enum wifi_twt_operation {
+	WIFI_TWT_SETUP = 0,
+	WIFI_TWT_TEARDOWN,
+	WIFI_TWT_SUSPEND,
+	WIFI_TWT_RESUME
+}
+
+enum wifi_twt_negotiation_type {
+	WIFI_TWT_INDIVIDUAL = 0,
+	WIFI_TWT_BRADCAST,
+	WIFI_TWT_WAKE_TBTT
+}
+
+enum wifi_twt_setup_cmd {
+	/* TWT Requests */
+	WIFI_TWT_SETUP_CMD_REQUEST = 0,
+	WIFI_TWT_SETUP_CMD_SUGGEST,
+	WIFI_TWT_SETUP_CMD_DEMAND,
+	/* TWT Responses */
+	WIFI_TWT_SETUP_CMD_GROUPING,
+	WIFI_TWT_SETUP_CMD_ACCEPT,
+	WIFI_TWT_SETUP_CMD_ALTERNATE,
+	WIFI_TWT_SETUP_CMD_DICTATE,
+	WIFI_TWT_SETUP_CMD_REJECT,
+
+}
 #endif /* ZEPHYR_INCLUDE_NET_WIFI_H_ */

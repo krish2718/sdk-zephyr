@@ -36,6 +36,7 @@ enum net_request_wifi_cmd {
 	NET_REQUEST_WIFI_CMD_AP_ENABLE,
 	NET_REQUEST_WIFI_CMD_AP_DISABLE,
 	NET_REQUEST_WIFI_CMD_IFACE_STATUS,
+	NET_REQUEST_WIFI_CMD_PS,
 };
 
 #define NET_REQUEST_WIFI_SCAN					\
@@ -68,12 +69,18 @@ NET_MGMT_DEFINE_REQUEST_HANDLER(NET_REQUEST_WIFI_AP_DISABLE);
 
 NET_MGMT_DEFINE_REQUEST_HANDLER(NET_REQUEST_WIFI_IFACE_STATUS);
 
+#define NET_REQUEST_WIFI_PS				\
+	(_NET_WIFI_BASE | NET_REQUEST_WIFI_CMD_PS)
+
+NET_MGMT_DEFINE_REQUEST_HANDLER(NET_REQUEST_WIFI_PS);
+
 enum net_event_wifi_cmd {
 	NET_EVENT_WIFI_CMD_SCAN_RESULT = 1,
 	NET_EVENT_WIFI_CMD_SCAN_DONE,
 	NET_EVENT_WIFI_CMD_CONNECT_RESULT,
 	NET_EVENT_WIFI_CMD_DISCONNECT_RESULT,
 	NET_EVENT_WIFI_CMD_IFACE_STATUS,
+	NET_EVENT_WIFI_CMD_PS_TWT_RESULT,
 };
 
 #define NET_EVENT_WIFI_SCAN_RESULT				\
@@ -91,6 +98,8 @@ enum net_event_wifi_cmd {
 #define NET_EVENT_WIFI_IFACE_STATUS						\
 	(_NET_WIFI_EVENT | NET_EVENT_WIFI_CMD_IFACE_STATUS)
 
+#define NET_EVENT_WIFI_PS_TWT_RESULT					\
+	(_NET_WIFI_EVENT | NET_EVENT_WIFI_CMD_PS_TWT_RESULT)
 
 /* Each result is provided to the net_mgmt_event_callback
  * via its info attribute (see net_mgmt.h)
@@ -142,6 +151,43 @@ struct wifi_iface_status {
 	enum wifi_security_type security;
 	enum wifi_mfp_options mfp;
 	int rssi;
+};
+
+#ifdef CONFIG_WIFI_PS_TWT_ENABLED
+struct twt {
+	enum wifi_twt_operation operation;
+	enum wifi_twt_negotiation_type negotiation_type;
+	enum wifi_twt_setup_cmd setup_cmd;
+	char dialog_token;
+	bool requestor;
+	bool trigger;
+	bool implicit;
+	bool flow_type;
+	bool protection;
+	int flow_id:3;
+	char exponent:5;
+	short mantissa;
+	char min_twt;
+	uint64_t twt;
+};
+#endif /* CONFIG_WIFI_PS_TWT_ENABLED */
+
+struct wifi_ps_params {
+	enum wifi_ps_mode mode;
+	union {
+		struct legacy {
+			bool enabled;
+		} legacy;
+		struct uapsd {
+			uint8_t enabled_vo:1;
+			uint8_t enabled_vi:1;
+			uint8_t enabled_bk:1;
+			uint8_t enabled_be:1;
+		} uapsd;
+#ifdef CONFIG_WIFI_PS_TWT_ENABLED
+		struct twt twt;
+#endif
+	}
 };
 
 #include <zephyr/net/net_if.h>
