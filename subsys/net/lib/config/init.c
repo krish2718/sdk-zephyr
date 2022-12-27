@@ -130,10 +130,10 @@ static void setup_ipv4(struct net_if *iface)
 		return;
 	}
 
-	if (net_addr_pton(AF_INET, CONFIG_NET_CONFIG_MY_IPV4_ADDR, &addr)) {
+/* 	if (net_addr_pton(AF_INET, CONFIG_NET_CONFIG_MY_IPV4_ADDR, &addr)) {
 		NET_ERR("Invalid address: %s", CONFIG_NET_CONFIG_MY_IPV4_ADDR);
 		return;
-	}
+	} */
 
 #if defined(CONFIG_NET_DHCPV4)
 	/* In case DHCP is enabled, make the static address tentative,
