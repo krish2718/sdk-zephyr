@@ -685,6 +685,56 @@ static int cmd_wifi_ap_disable(const struct shell *sh, size_t argc,
 	return 0;
 }
 
+
+static int cmd_wifi_reg_domain(const struct shell *sh, size_t argc,
+			       char *argv[])
+{
+	struct net_if *iface = net_if_get_default();
+	struct wifi_reg_domain regd;
+	int ret;
+
+	if (argc == 1) {
+		regd.oper = WIFI_MGMT_GET;
+	} else if (argc == 2) {
+		regd.oper = WIFI_MGMT_SET;
+		if (strlen(argv[1]) != 2) {
+			shell_fprintf(sh, SHELL_WARNING, "Invalid reg domain\n");
+			return -ENOEXEC;
+		}
+
+		/* Two letter country code with special case of 00 for WORLD */
+		if ((argv[1][0] < 'A' || argv[1][0] > 'Z') ||
+		    (argv[1][1] < 'A' || argv[1][1] > 'Z') ||
+			(argv[1][0] == '0' || argv[1][1] == '0')) {
+			shell_fprintf(sh, SHELL_WARNING, "Invalid reg domain\n");
+			return -ENOEXEC;
+		}
+		regd.country_code[0] = argv[1][0];
+		regd.country_code[1] = argv[1][1];
+	} else {
+		shell_help(sh);
+		return -ENOEXEC;
+	}
+
+	ret = net_mgmt(NET_REQUEST_WIFI_REG_DOMAIN, iface,
+		       &regd, sizeof(regd));
+	if (ret) {
+		shell_fprintf(sh, SHELL_WARNING, "Cannot %s Regulatory domain: %d\n",
+			regd.oper == WIFI_MGMT_GET ? "get" : "set", ret);
+		return -ENOEXEC;
+	}
+
+	if (regd.oper == WIFI_MGMT_GET) {
+		shell_fprintf(sh, SHELL_NORMAL, "Wi-Fi Regulatory domain is: %s\n",
+			regd.country_code);
+	} else {
+		shell_fprintf(sh, SHELL_NORMAL, "Wi-Fi Regulatory domain set to: %s\n",
+			regd.country_code);
+	}
+
+	return 0;
+}
+
 SHELL_STATIC_SUBCMD_SET_CREATE(wifi_cmd_ap,
 	SHELL_CMD(enable, NULL, "<SSID> <SSID length> [channel] [PSK]",
 		  cmd_wifi_ap_enable),
@@ -732,6 +782,7 @@ SHELL_STATIC_SUBCMD_SET_CREATE(wifi_commands,
 	SHELL_CMD(ps_mode, NULL, "Configure Wi-Fi power save mode legacy/wmm", cmd_wifi_ps_mode),
 	SHELL_CMD(twt, &wifi_twt_ops, "Manage TWT flows", NULL),
 	SHELL_CMD(ap, &wifi_cmd_ap, "Access Point mode commands", NULL),
+	SHELL_CMD(reg_domain, NULL, "Set or Get Wi-Fi regulatory domain", cmd_wifi_reg_domain),
 	SHELL_SUBCMD_SET_END
 );
 
