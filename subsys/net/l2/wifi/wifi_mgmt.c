@@ -354,3 +354,18 @@ static int wifi_set_power_save_timeout(uint32_t mgmt_request, struct net_if *ifa
 }
 
 NET_MGMT_REGISTER_REQUEST_HANDLER(NET_REQUEST_WIFI_PS_TIMEOUT, wifi_set_power_save_timeout);
+
+#ifdef CONFIG_WIFI_FEAT_RAW_SCAN_RESULTS
+
+void wifi_mgmt_raise_raw_scan_result_event(struct net_if *iface,
+					   struct wifi_raw_scan_result *raw_scan_result)
+{
+	if (sizeof(*raw_scan_result) > CONFIG_WIFI_RAW_SCAN_RESULT_LENGTH) {
+		LOG_ERR("%s: raw scan result too big, dropping", __func__);
+		return;
+	}
+	net_mgmt_event_notify_with_info(NET_EVENT_WIFI_RAW_SCAN_RESULT,
+					iface, raw_scan_result,
+					sizeof(*raw_scan_result));
+}
+#endif /* CONFIG_WIFI_FEAT_RAW_SCAN_RESULTS */

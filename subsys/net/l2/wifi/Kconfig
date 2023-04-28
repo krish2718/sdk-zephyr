@@ -1,0 +1,26 @@
+# Copyright (c) 2021 Intel Corporation.
+# SPDX-License-Identifier: Apache-2.0
+
+config WIFI_FEAT_RAW_SCAN_RESULTS
+	bool "Enable raw scan results"
+	help
+	  This option enables raw scan results. When enabled, the raw scan
+	  results (beacons or probe responses) are provided to the application.
+
+if WIFI_FEAT_RAW_SCAN_RESULTS
+
+config WIFI_RAW_SCAN_RESULT_LENGTH
+	int "Maximum length of raw scan results"
+	default 512
+	help
+	  This option defines the maximum length of raw scan results.
+
+config WIFI_RAW_SCAN_RESULTS_ONLY
+	bool "Only raw scan results"
+	help
+	  This option enables only raw scan results. When enabled, the raw scan
+	  results (beacons or probe responses) are provided to the application.
+	  The scan results are not parsed and the application is responsible
+	  for parsing the scan results. Normal scan results are not provided
+	  to the application.
+endif # WIFI_FEAT_RAW_SCAN_RESULTS

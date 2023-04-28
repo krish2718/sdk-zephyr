@@ -34,6 +34,9 @@ union net_mgmt_events {
 #if defined(CONFIG_NET_IPV6) && defined(CONFIG_NET_IPV6_MLD)
 	struct net_event_ipv6_route ipv6_route;
 #endif /* CONFIG_NET_IPV6 && CONFIG_NET_IPV6_MLD */
+#if defined(CONFIG_WIFI_FEAT_RAW_SCAN_RESULTS)
+	struct wifi_scan_result raw_scan_result;
+#endif /* CONFIG_WIFI_FEAT_RAW_SCAN_RESULTS */
 	char default_event[DEFAULT_NET_EVENT_INFO_SIZE];
 };
 

@@ -42,6 +42,7 @@ enum net_request_wifi_cmd {
 	NET_REQUEST_WIFI_CMD_PS_CONFIG,
 	NET_REQUEST_WIFI_CMD_REG_DOMAIN,
 	NET_REQUEST_WIFI_CMD_PS_TIMEOUT,
+	NET_REQUEST_WIFI_CMD_RAW_SCAN,
 	NET_REQUEST_WIFI_CMD_MAX
 };
 
@@ -104,6 +105,10 @@ NET_MGMT_DEFINE_REQUEST_HANDLER(NET_REQUEST_WIFI_REG_DOMAIN);
 
 NET_MGMT_DEFINE_REQUEST_HANDLER(NET_REQUEST_WIFI_PS_TIMEOUT);
 
+#define NET_REQUEST_WIFI_RAW_SCAN					\
+	(_NET_WIFI_BASE | NET_REQUEST_WIFI_CMD_RAW_SCAN)
+
+NET_MGMT_DEFINE_REQUEST_HANDLER(NET_REQUEST_WIFI_RAW_SCAN);
 enum net_event_wifi_cmd {
 	NET_EVENT_WIFI_CMD_SCAN_RESULT = 1,
 	NET_EVENT_WIFI_CMD_SCAN_DONE,
@@ -111,6 +116,7 @@ enum net_event_wifi_cmd {
 	NET_EVENT_WIFI_CMD_DISCONNECT_RESULT,
 	NET_EVENT_WIFI_CMD_IFACE_STATUS,
 	NET_EVENT_WIFI_CMD_TWT,
+	NET_EVENT_WIFI_CMD_RAW_SCAN_RESULT,
 };
 
 #define NET_EVENT_WIFI_SCAN_RESULT				\
@@ -131,6 +137,8 @@ enum net_event_wifi_cmd {
 #define NET_EVENT_WIFI_TWT					\
 	(_NET_WIFI_EVENT | NET_EVENT_WIFI_CMD_TWT)
 
+#define NET_EVENT_WIFI_RAW_SCAN_RESULT				\
+	(_NET_WIFI_EVENT | NET_EVENT_WIFI_CMD_RAW_SCAN_RESULT)
 /* Each result is provided to the net_mgmt_event_callback
  * via its info attribute (see net_mgmt.h)
  */
@@ -263,10 +271,21 @@ struct wifi_reg_domain {
 	uint8_t country_code[WIFI_COUNTRY_CODE_LEN];
 };
 
+#ifdef CONFIG_WIFI_FEAT_RAW_SCAN_RESULTS
+struct wifi_raw_scan_result {
+	int8_t rssi;
+	int frame_length;
+        unsigned short frequency;
+	uint8_t data[CONFIG_WIFI_RAW_SCAN_RESULT_LENGTH];
+};
+#endif /* CONFIG_WIFI_FEAT_RAW_SCAN_RESULTS */
 #include <zephyr/net/net_if.h>
 
 typedef void (*scan_result_cb_t)(struct net_if *iface, int status,
 				 struct wifi_scan_result *entry);
+
+typedef void (*raw_scan_result_cb_t)(struct net_if *iface, int status,
+				     struct wifi_raw_scan_result *entry);
 
 struct net_wifi_mgmt_offload {
 	/**
@@ -303,6 +322,7 @@ struct net_wifi_mgmt_offload {
 	int (*reg_domain)(const struct device *dev, struct wifi_reg_domain *reg_domain);
 	int (*set_power_save_timeout)(const struct device *dev,
 				      struct wifi_ps_timeout_params *ps_timeout);
+	int (*raw_scan)(const struct device *dev, raw_scan_result_cb_t cb);
 };
 
 /* Make sure that the network interface API is properly setup inside
@@ -316,6 +336,8 @@ void wifi_mgmt_raise_iface_status_event(struct net_if *iface,
 		struct wifi_iface_status *iface_status);
 void wifi_mgmt_raise_twt_event(struct net_if *iface,
 		struct wifi_twt_params *twt_params);
+void wifi_mgmt_raise_raw_scan_result_event(struct net_if *iface,
+		struct wifi_raw_scan_result *raw_scan_info);
 #ifdef __cplusplus
 }
 #endif

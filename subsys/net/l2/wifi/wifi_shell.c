@@ -101,6 +101,24 @@ static void handle_wifi_scan_result(struct net_mgmt_event_callback *cb)
 					     sizeof(mac_string_buf)) : ""));
 }
 
+static void handle_wifi_raw_scan_result(struct net_mgmt_event_callback *cb)
+{
+	const struct wifi_raw_scan_result *entry =
+		(const struct wifi_raw_scan_result *)cb->info;
+
+	scan_result++;
+
+	if (scan_result == 1U) {
+		print(context.sh, SHELL_NORMAL,
+		      "\n%-4s | %-5s | %-9s | %-4s\n",
+		      "Num", "len", "Frequency", "RSSI");
+	}
+
+	print(context.sh, SHELL_NORMAL, "%-4d | %-5u | %-4u | %-4d\n",
+	      scan_result, entry->frame_length, entry->frequency,
+	      entry->rssi);
+}
+
 static void handle_wifi_scan_done(struct net_mgmt_event_callback *cb)
 {
 	const struct wifi_status *status =
@@ -189,6 +207,11 @@ static void wifi_mgmt_event_handler(struct net_mgmt_event_callback *cb,
 	case NET_EVENT_WIFI_TWT:
 		handle_wifi_twt_event(cb);
 		break;
+#ifdef CONFIG_WIFI_FEAT_RAW_SCAN_RESULTS
+	case NET_EVENT_WIFI_RAW_SCAN_RESULT:
+		handle_wifi_raw_scan_result(cb);
+		break;
+#endif
 	default:
 		break;
 	}
@@ -838,6 +861,23 @@ static int cmd_wifi_reg_domain(const struct shell *sh, size_t argc,
 	return 0;
 }
 
+static int cmd_wifi_raw_scan(const struct shell *sh, size_t argc, char *argv[])
+{
+	struct net_if *iface = net_if_get_default();
+
+	context.sh = sh;
+
+	if (net_mgmt(NET_REQUEST_WIFI_RAW_SCAN, iface, NULL, 0)) {
+		shell_fprintf(sh, SHELL_WARNING, "Raw scan request failed\n");
+
+		return -ENOEXEC;
+	}
+
+	shell_fprintf(sh, SHELL_NORMAL, "Raw scan requested\n");
+
+	return 0;
+}
+
 SHELL_STATIC_SUBCMD_SET_CREATE(wifi_cmd_ap,
 	SHELL_CMD(disable, NULL,
 		  "Disable Access Point mode",
@@ -898,6 +938,7 @@ SHELL_STATIC_SUBCMD_SET_CREATE(wifi_commands,
 	SHELL_CMD(ps_timeout, NULL,
 		  "Configure Wi-Fi power save inactivity timer(in ms)",
 		  cmd_wifi_ps_timeout),
+/*	SHELL_CMD(raw_scan, NULL, "Scan for beacon/probe response data", cmd_wifi_raw_scan),*/
 	SHELL_SUBCMD_SET_END
 );
 
