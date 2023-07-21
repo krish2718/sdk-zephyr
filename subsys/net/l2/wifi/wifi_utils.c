@@ -59,3 +59,39 @@ int wifi_utils_parse_scan_bands(char *scan_bands_str, uint8_t *band_map)
 
 	return 0;
 }
+
+int wifi_utils_parse_scan_ssids(char *scan_ssids_str,
+				char ssids[CONFIG_WIFI_MGMT_SCAN_SSID_FILT_MAX][WIFI_SSID_MAX_LEN])
+{
+	char *ssid = NULL;
+	uint8_t i = 0;
+
+	if (!scan_ssids_str) {
+		return -EINVAL;
+	}
+
+	ssid = strtok(scan_ssids_str, ",");
+
+	while (ssid) {
+		if (strlen(ssid) > WIFI_SSID_MAX_LEN) {
+			NET_ERR("SSID length (%d) exceeds maximum value (%d) for SSID %s",
+				strlen(ssid),
+				WIFI_SSID_MAX_LEN,
+				ssid);
+			return -EINVAL;
+		}
+
+		if (i >= CONFIG_WIFI_MGMT_SCAN_SSID_FILT_MAX) {
+			NET_INFO("Exceeded maximum allowed (%d) SSIDs. Ignoring SSIDs %s onwards",
+				 CONFIG_WIFI_MGMT_SCAN_SSID_FILT_MAX,
+				 ssid);
+			break;
+		}
+
+		strcpy(ssids[i++], ssid);
+
+		ssid = strtok(NULL, ",");
+	}
+
+	return 0;
+}

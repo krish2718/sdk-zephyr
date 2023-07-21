@@ -198,6 +198,9 @@ struct wifi_scan_params {
 	/** Passive scan dwell time (in ms) on a channel.
 	 */
 	uint16_t dwell_time_passive;
+	/** Array of SSID strings to scan.
+	 */
+	char ssids[CONFIG_WIFI_MGMT_SCAN_SSID_FILT_MAX][WIFI_SSID_MAX_LEN];
 };
 
 /** Wi-Fi scan result, each result is provided to the net_mgmt_event_callback

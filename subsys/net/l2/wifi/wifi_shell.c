@@ -471,6 +471,7 @@ static int wifi_scan_args_to_params(const struct shell *sh,
 					       {"bands", required_argument, 0, 'b'},
 					       {"dwell_time_active", required_argument, 0, 'a'},
 					       {"dwell_time_passive", required_argument, 0, 'p'},
+					       {"ssid", required_argument, 0, 's'},
 					       {0, 0, 0, 0}};
 	int opt_index = 0;
 	int val = -1;
@@ -479,7 +480,7 @@ static int wifi_scan_args_to_params(const struct shell *sh,
 				 IS_ENABLED(CONFIG_GETOPT_LONG),
 				 "getopt_long support is mandatory for Wi-Fi shell");
 
-	while ((opt = getopt_long(argc, argv, "t:b:a:p:", long_options, &opt_index)) != -1) {
+	while ((opt = getopt_long(argc, argv, "t:b:a:p:s:", long_options, &opt_index)) != -1) {
 		state = getopt_state_get();
 		switch (opt) {
 		case 't':
@@ -517,6 +518,12 @@ static int wifi_scan_args_to_params(const struct shell *sh,
 			}
 
 			params->dwell_time_passive = val;
+			break;
+		case 's':
+			if (wifi_utils_parse_scan_ssids(optarg, params->ssids)) {
+				shell_fprintf(sh, SHELL_ERROR, "Invalid SSID(s)\n");
+				return -ENOEXEC;
+			}
 			break;
 		case '?':
 			shell_fprintf(sh, SHELL_ERROR, "Invalid option or option usage: %s\n",
@@ -1207,7 +1214,8 @@ SHELL_STATIC_SUBCMD_SET_CREATE(wifi_commands,
 		    "[-t, --type <active / passive>] : Preferred mode of scan. The actual mode of scan can depend on factors such as the Wi-Fi chip implementation, regulatory domain restrictions etc. Default type is active.\n"
 		    "[-b, --bands <Comma separated list of band values (2/5/6)>] : Bands to be scanned where 2: 2.4 GHz, 5: 5 GHz, 6: 6 GHz.\n"
 		    "[-a, --dwell_time_active <val_in_ms>] : Active scan dwell time (in ms) on a channel. Range 5 - 1000 ms.\n"
-		    "[-p, --dwell_time_passive <val_in_ms>] : Passive scan dwell time (in ms) on a channel. Range 10 - 1000 ms.",
+		    "[-p, --dwell_time_passive <val_in_ms>] : Passive scan dwell time (in ms) on a channel. Range 10 - 1000 ms.\n"
+		    "[-s, --ssid <Comma separate list of SSIDs>] : SSID list to scan for.",
 		  cmd_wifi_scan),
 	SHELL_CMD(statistics, NULL, "Wi-Fi interface statistics", cmd_wifi_stats),
 	SHELL_CMD(status, NULL, "Status of the Wi-Fi interface", cmd_wifi_status),
