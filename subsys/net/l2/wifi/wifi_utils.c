@@ -214,13 +214,14 @@ static int wifi_utils_validate_chan_str(char *chan_str)
 int wifi_utils_parse_scan_bands(char *scan_bands_str, uint8_t *band_map)
 {
 	char *band_str = NULL;
+	char *tmp = NULL;
 	enum wifi_frequency_bands band = WIFI_FREQ_BAND_UNKNOWN;
 
 	if (!scan_bands_str) {
 		return -EINVAL;
 	}
 
-	band_str = strtok(scan_bands_str, ",");
+	band_str = strtok_r(scan_bands_str, ",", &tmp);
 
 	while (band_str) {
 		band = wifi_utils_map_band_str_to_idx(band_str);
@@ -232,7 +233,7 @@ int wifi_utils_parse_scan_bands(char *scan_bands_str, uint8_t *band_map)
 
 		*band_map |= (1 << band);
 
-		band_str = strtok(NULL, ",");
+		band_str = strtok_r(NULL, ",", &tmp);
 	}
 
 	return 0;
@@ -242,13 +243,14 @@ int wifi_utils_parse_scan_ssids(char *scan_ssids_str,
 				char ssids[CONFIG_WIFI_MGMT_SCAN_SSID_FILT_MAX][WIFI_SSID_MAX_LEN])
 {
 	char *ssid = NULL;
+	char *tmp = NULL;
 	uint8_t i = 0;
 
 	if (!scan_ssids_str) {
 		return -EINVAL;
 	}
 
-	ssid = strtok(scan_ssids_str, ",");
+	ssid = strtok_r(scan_ssids_str, ",", &tmp);
 
 	while (ssid) {
 		if (strlen(ssid) > WIFI_SSID_MAX_LEN) {
@@ -268,7 +270,7 @@ int wifi_utils_parse_scan_ssids(char *scan_ssids_str,
 
 		strcpy(ssids[i++], ssid);
 
-		ssid = strtok(NULL, ",");
+		ssid = strtok_r(NULL, ",", &tmp);
 	}
 
 	return 0;
