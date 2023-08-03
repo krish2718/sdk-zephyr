@@ -479,6 +479,7 @@ static int wifi_scan_args_to_params(const struct shell *sh,
 					       {0, 0, 0, 0}};
 	int opt_index = 0;
 	int val = -1;
+	int opt_num = 0;
 
 	BUILD_ASSERT(IS_ENABLED(CONFIG_SHELL_GETOPT) &&
 		     IS_ENABLED(CONFIG_GETOPT_LONG),
@@ -498,12 +499,16 @@ static int wifi_scan_args_to_params(const struct shell *sh,
 				shell_fprintf(sh, SHELL_ERROR, "Invalid scan type %s\n", optarg);
 				return -ENOEXEC;
 			}
+
+			opt_num++;
 			break;
 		case 'b':
 			if (wifi_utils_parse_scan_bands(optarg, &params->bands)) {
 				shell_fprintf(sh, SHELL_ERROR, "Invalid band value(s)\n");
 				return -ENOEXEC;
 			}
+
+			opt_num++;
 			break;
 		case 'a':
 			val = atoi(optarg);
@@ -514,6 +519,7 @@ static int wifi_scan_args_to_params(const struct shell *sh,
 			}
 
 			params->dwell_time_active = val;
+			opt_num++;
 			break;
 		case 'p':
 			val = atoi(optarg);
@@ -524,12 +530,15 @@ static int wifi_scan_args_to_params(const struct shell *sh,
 			}
 
 			params->dwell_time_passive = val;
+			opt_num++;
 			break;
 		case 's':
 			if (wifi_utils_parse_scan_ssids(optarg, params->ssids)) {
 				shell_fprintf(sh, SHELL_ERROR, "Invalid SSID(s)\n");
 				return -ENOEXEC;
 			}
+
+			opt_num++;
 			break;
 		case 'm':
 			val = atoi(optarg);
@@ -540,6 +549,7 @@ static int wifi_scan_args_to_params(const struct shell *sh,
 			}
 
 			params->max_bss_cnt = val;
+			opt_num++;
 			break;
 		case 'c':
 			if (wifi_utils_parse_scan_chan(optarg, params->chan)) {
@@ -548,10 +558,13 @@ static int wifi_scan_args_to_params(const struct shell *sh,
 					      "Invalid band or channel value(s)\n");
 				return -ENOEXEC;
 			}
+
+			opt_num++;
 			break;
 		case 'h':
 			shell_help(sh);
 			*do_scan = false;
+			opt_num++;
 			break;
 		case '?':
 		default:
@@ -561,20 +574,28 @@ static int wifi_scan_args_to_params(const struct shell *sh,
 		}
 	}
 
-	return 0;
+	return opt_num;
 }
 
 static int cmd_wifi_scan(const struct shell *sh, size_t argc, char *argv[])
 {
 	struct net_if *iface = net_if_get_first_wifi();
 	struct wifi_scan_params params = { 0 };
-	bool do_scan = false;
+	bool do_scan = true;
+	int opt_num = 0;
 
 	context.sh = sh;
 
-	if (wifi_scan_args_to_params(sh, argc, argv, &params, &do_scan)) {
-		shell_help(sh);
-		return -ENOEXEC;
+	if (argc > 1) {
+		opt_num = wifi_scan_args_to_params(sh, argc, argv, &params, &do_scan);
+
+		if (opt_num < 0) {
+			shell_help(sh);
+			return -ENOEXEC;
+		} else if (!opt_num) {
+			shell_fprintf(sh, SHELL_WARNING, "No valid option(s) found\n");
+			do_scan = false;
+		}
 	}
 
 	if (do_scan) {
@@ -582,11 +603,14 @@ static int cmd_wifi_scan(const struct shell *sh, size_t argc, char *argv[])
 			shell_fprintf(sh, SHELL_WARNING, "Scan request failed\n");
 			return -ENOEXEC;
 		}
+
+		shell_fprintf(sh, SHELL_NORMAL, "Scan requested\n");
+
+		return 0;
 	}
 
-	shell_fprintf(sh, SHELL_NORMAL, "Scan requested\n");
-
-	return 0;
+	shell_fprintf(sh, SHELL_WARNING, "Scan not initiated\n");
+	return -ENOEXEC;
 }
 
 static int cmd_wifi_status(const struct shell *sh, size_t argc, char *argv[])
