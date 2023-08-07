@@ -20,6 +20,12 @@ LOG_MODULE_REGISTER(net_wifi_utils, LOG_LEVEL_INF);
 #include <zephyr/net/wifi.h>
 #include <zephyr/net/wifi_utils.h>
 
+/* Ensure 'strtok_r' is available even with -std=c99. */
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#endif
+#include <string.h>
+
 
 static enum wifi_frequency_bands wifi_utils_map_band_str_to_idx(char *band_str)
 {
