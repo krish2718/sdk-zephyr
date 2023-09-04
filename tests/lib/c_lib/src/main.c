@@ -23,6 +23,7 @@
 #include <zephyr/sys/__assert.h>
 #include <zephyr/ztest.h>
 
+#include <malloc.h>
 #include <limits.h>
 #include <sys/types.h>
 #include <stdbool.h>
