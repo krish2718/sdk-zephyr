@@ -75,6 +75,7 @@ struct spi_mcux_data {
 
 #ifdef CONFIG_SPI_RTIO
 	struct rtio *r;
+	struct mpsc io_q;
 	struct rtio_iodev iodev;
 	struct rtio_iodev_sqe *txn_head;
 	struct rtio_iodev_sqe *txn_curr;
@@ -702,7 +703,7 @@ static int spi_mcux_init(const struct device *dev)
 	data->dt_spec.bus = dev;
 	data->iodev.api = &spi_iodev_api;
 	data->iodev.data = &data->dt_spec;
-	rtio_mpsc_init(&data->iodev.iodev_sq);
+	mpsc_init(&data->io_q);
 #endif
 
 	err = pinctrl_apply_state(config->pincfg, PINCTRL_STATE_DEFAULT);
@@ -752,23 +753,23 @@ static void spi_mcux_iodev_start(const struct device *dev)
 	switch (sqe->op) {
 	case RTIO_OP_RX:
 		transfer.txData = NULL;
-		transfer.rxData = sqe->buf;
-		transfer.dataSize = sqe->buf_len;
+		transfer.rxData = sqe->rx.buf;
+		transfer.dataSize = sqe->rx.buf_len;
 		break;
 	case RTIO_OP_TX:
 		transfer.rxData = NULL;
-		transfer.txData = sqe->buf;
-		transfer.dataSize = sqe->buf_len;
+		transfer.txData = sqe->tx.buf;
+		transfer.dataSize = sqe->tx.buf_len;
 		break;
 	case RTIO_OP_TINY_TX:
 		transfer.rxData = NULL;
-		transfer.txData = sqe->tiny_buf;
-		transfer.dataSize = sqe->tiny_buf_len;
+		transfer.txData = sqe->tiny_tx.buf;
+		transfer.dataSize = sqe->tiny_tx.buf_len;
 		break;
 	case RTIO_OP_TXRX:
-		transfer.txData = sqe->tx_buf;
-		transfer.rxData = sqe->rx_buf;
-		transfer.dataSize = sqe->txrx_buf_len;
+		transfer.txData = sqe->txrx.tx_buf;
+		transfer.rxData = sqe->txrx.rx_buf;
+		transfer.dataSize = sqe->txrx.buf_len;
 		break;
 	default:
 		LOG_ERR("Invalid op code %d for submission %p\n", sqe->op, (void *)sqe);
@@ -803,7 +804,7 @@ static void spi_mcux_iodev_next(const struct device *dev, bool completion)
 		return;
 	}
 
-	struct rtio_mpsc_node *next = rtio_mpsc_pop(&data->iodev.iodev_sq);
+	struct mpsc_node *next = mpsc_pop(&data->io_q);
 
 	if (next != NULL) {
 		struct rtio_iodev_sqe *next_sqe = CONTAINER_OF(next, struct rtio_iodev_sqe, q);
@@ -832,7 +833,7 @@ static void spi_mcux_iodev_submit(const struct device *dev,
 {
 	struct spi_mcux_data *data = dev->data;
 
-	rtio_mpsc_push(&data->iodev.iodev_sq, &iodev_sqe->q);
+	mpsc_push(&data->io_q, &iodev_sqe->q);
 	spi_mcux_iodev_next(dev, false);
 }
 
@@ -965,10 +966,10 @@ static const struct spi_driver_api spi_mcux_driver_api = {
 									\
 	};								\
 									\
-	DEVICE_DT_INST_DEFINE(n, &spi_mcux_init, NULL,			\
-				&spi_mcux_data_##n,				\
-				&spi_mcux_config_##n, POST_KERNEL,		\
-				CONFIG_SPI_INIT_PRIORITY,			\
+	DEVICE_DT_INST_DEFINE(n, spi_mcux_init, NULL,			\
+				&spi_mcux_data_##n,			\
+				&spi_mcux_config_##n, POST_KERNEL,	\
+				CONFIG_SPI_INIT_PRIORITY,		\
 				&spi_mcux_driver_api);			\
 									\
 	static void spi_mcux_config_func_##n(const struct device *dev)	\

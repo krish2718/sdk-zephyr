@@ -52,7 +52,7 @@ In summary:
 
 Modules are repositories that contain a :file:`zephyr/module.yml` file, so that
 the Zephyr build system can pull in the source code from the repository.
-:ref:`West projects <west-manifests-projects>` are entries in the `projects:`
+:ref:`West projects <west-manifests-projects>` are entries in the ``projects:``
 section in the :file:`west.yml` manifest file.
 West projects are often also modules, but not always. There are west projects
 that are not included in the final firmware image (eg. tools) and thus do not
@@ -545,7 +545,7 @@ The ``sysbuild-cmake: <cmake-directory>`` part specifies that
 use.
 
 Here is an example :file:`module.yml` file referring to
-:file:`CMakeLists.txt` and :file:`Kconfig` files in the `sysbuild` directory of
+:file:`CMakeLists.txt` and :file:`Kconfig` files in the ``sysbuild`` directory of
 the module:
 
 .. code-block:: yaml
@@ -568,6 +568,45 @@ Build files located in a ``MODULE_EXT_ROOT`` can be described as:
 
 This allows control of the build inclusion to be described externally to the
 Zephyr module.
+
+.. _modules-vulnerability-monitoring:
+
+Vulnerability monitoring
+========================
+
+The module description file :file:`zephyr/module.yml` can be used to improve vulnerability monitoring.
+
+If your module needs to track vulnerabilities using an external reference
+(e.g your module is forked from another repository), you can use the ``security`` section.
+It contains the field ``external-references`` that contains a list of references that needs to
+be monitored for your module. The supported formats are:
+
+- CPE (Common Platform Enumeration)
+- PURL (Package URL)
+
+.. code-block:: yaml
+
+   security:
+     external-references:
+       - <module-related-cpe>
+       - <an-other-module-related-cpe>
+       - <module-related-purl>
+
+A real life example for ``mbedTLS`` module could look like this:
+
+.. code-block:: yaml
+
+   security:
+     external-references:
+       - cpe:2.3:a:arm:mbed_tls:3.5.2:*:*:*:*:*:*:*
+       - pkg:github/Mbed-TLS/mbedtls@V3.5.2
+
+.. note::
+   CPE field must follow the CPE 2.3 schema provided by `NVD
+   <https://csrc.nist.gov/projects/security-content-automation-protocol/specifications/cpe>`_.
+   PURL field must follow the PURL specification provided by `Github
+   <https://github.com/package-url/purl-spec/blob/master/PURL-SPECIFICATION.rst>`_.
+
 
 Build system integration
 ========================
@@ -746,7 +785,7 @@ module ``bar`` to be present in the build system:
    name: foo
    build:
      depends:
-     - bar
+       - bar
 
 This example will ensure that ``bar`` is present when ``foo`` is included into
 the build system, and it will also ensure that ``bar`` is processed before

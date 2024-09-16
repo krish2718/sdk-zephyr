@@ -131,22 +131,27 @@
 		};
 	};
 
-	gpio0: gpio@0 {
+	gpio: gpio@8c000 {
 		compatible = "nxp,lpc-gpio";
 		reg = <0x8c000 0x2488>;
-		int-source = "pint";
-		gpio-controller;
-		#gpio-cells = <2>;
-		port = <0>;
-	};
+		#address-cells = <1>;
+		#size-cells = <0>;
 
-	gpio1: gpio@1 {
-		compatible = "nxp,lpc-gpio";
-		reg = <0x8c000 0x2488>;
-		int-source = "pint";
-		gpio-controller;
-		#gpio-cells = <2>;
-		port = <1>;
+		gpio0: gpio@0 {
+			compatible = "nxp,lpc-gpio-port";
+			int-source = "pint";
+			gpio-controller;
+			#gpio-cells = <2>;
+			reg = <0>;
+		};
+
+		gpio1: gpio@1 {
+			compatible = "nxp,lpc-gpio-port";
+			int-source = "pint";
+			gpio-controller;
+			#gpio-cells = <2>;
+			reg = <1>;
+		};
 	};
 
 	pint: pint@4000 {
@@ -249,6 +254,16 @@
 		clocks = <&syscon MCUX_FLEXCOMM7_CLK>;
 		resets = <&reset NXP_SYSCON_RESET(1, 18)>;
 		status = "disabled";
+	};
+
+	sc_timer: pwm@85000 {
+		compatible = "nxp,sctimer-pwm";
+		reg = <0x85000 0x1000>;
+		interrupts = <12 0>;
+		status = "disabled";
+		clocks = <&syscon MCUX_SCTIMER_CLK>;
+		prescaler = <2>;
+		#pwm-cells = <3>;
 	};
 
 	hs_lspi: spi@9f000 {

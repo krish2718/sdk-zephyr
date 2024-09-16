@@ -419,6 +419,40 @@ struct spi_dt_spec {
 	SPI_DT_SPEC_GET(DT_DRV_INST(inst), operation_, delay_)
 
 /**
+ * @brief Value that will never compare true with any valid overrun character
+ */
+#define SPI_MOSI_OVERRUN_UNKNOWN 0x100
+
+/**
+ * @brief The value sent on MOSI when all TX bytes are sent, but RX continues
+ *
+ * For drivers where the MOSI line state when receiving is important, this value
+ * can be queried at compile-time to determine whether allocating a constant
+ * array is necessary.
+ *
+ * @param node_id Devicetree node identifier for the SPI device to query
+ *
+ * @retval SPI_MOSI_OVERRUN_UNKNOWN if controller does not export the value
+ * @retval byte default MOSI value otherwise
+ */
+#define SPI_MOSI_OVERRUN_DT(node_id) \
+	DT_PROP_OR(node_id, overrun_character, SPI_MOSI_OVERRUN_UNKNOWN)
+
+/**
+ * @brief The value sent on MOSI when all TX bytes are sent, but RX continues
+ *
+ * This is equivalent to
+ * <tt>SPI_MOSI_OVERRUN_DT(DT_DRV_INST(inst))</tt>.
+ *
+ * @param inst Devicetree instance number
+ *
+ * @retval SPI_MOSI_OVERRUN_UNKNOWN if controller does not export the value
+ * @retval byte default MOSI value otherwise
+ */
+#define SPI_MOSI_OVERRUN_DT_INST(inst) \
+	DT_INST_PROP_OR(inst, overrun_character, SPI_MOSI_OVERRUN_UNKNOWN)
+
+/**
  * @brief SPI buffer structure
  */
 struct spi_buf {
@@ -615,7 +649,7 @@ typedef void (*spi_callback_t)(const struct device *dev, int result, void *data)
 /**
  * @typedef spi_api_io
  * @brief Callback API for asynchronous I/O
- * See spi_transceive_async() for argument descriptions
+ * See spi_transceive_signal() for argument descriptions
  */
 typedef int (*spi_api_io_async)(const struct device *dev,
 				const struct spi_config *config,
@@ -933,20 +967,6 @@ static inline int spi_transceive_signal(const struct device *dev,
 }
 
 /**
- * @brief Alias for spi_transceive_signal for backwards compatibility
- *
- * @deprecated Use @ref spi_transceive_signal instead.
- */
-__deprecated static inline int spi_transceive_async(const struct device *dev,
-				       const struct spi_config *config,
-				       const struct spi_buf_set *tx_bufs,
-				       const struct spi_buf_set *rx_bufs,
-				       struct k_poll_signal *sig)
-{
-	return spi_transceive_signal(dev, config, tx_bufs, rx_bufs, sig);
-}
-
-/**
  * @brief Read the specified amount of data from the SPI driver.
  *
  * @note This function is asynchronous.
@@ -979,24 +999,11 @@ static inline int spi_read_signal(const struct device *dev,
 }
 
 /**
- * @brief Alias for spi_read_signal for backwards compatibility
- *
- * @deprecated Use @ref spi_read_signal instead.
- */
-__deprecated static inline int spi_read_async(const struct device *dev,
-				 const struct spi_config *config,
-				 const struct spi_buf_set *rx_bufs,
-				 struct k_poll_signal *sig)
-{
-	return spi_read_signal(dev, config, rx_bufs, sig);
-}
-
-/**
  * @brief Write the specified amount of data from the SPI driver.
  *
  * @note This function is asynchronous.
  *
- * @note This function is a helper function calling spi_transceive_async.
+ * @note This function is a helper function calling spi_transceive_signal.
  *
  * @note This function is available only if @kconfig{CONFIG_SPI_ASYNC}
  * and @kconfig{CONFIG_POLL} are selected.
@@ -1020,19 +1027,6 @@ static inline int spi_write_signal(const struct device *dev,
 				  struct k_poll_signal *sig)
 {
 	return spi_transceive_signal(dev, config, tx_bufs, NULL, sig);
-}
-
-/**
- * @brief Alias for spi_write_signal for backwards compatibility
- *
- * @deprecated Use @ref spi_write_signal instead.
- */
-__deprecated static inline int spi_write_async(const struct device *dev,
-				 const struct spi_config *config,
-				 const struct spi_buf_set *tx_bufs,
-				 struct k_poll_signal *sig)
-{
-	return spi_write_signal(dev, config, tx_bufs, sig);
 }
 
 #endif /* CONFIG_POLL */
@@ -1307,6 +1301,6 @@ static inline int spi_release_dt(const struct spi_dt_spec *spec)
  * @}
  */
 
-#include <syscalls/spi.h>
+#include <zephyr/syscalls/spi.h>
 
 #endif /* ZEPHYR_INCLUDE_DRIVERS_SPI_H_ */

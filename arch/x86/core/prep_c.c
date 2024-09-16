@@ -9,6 +9,7 @@
 #include <zephyr/arch/x86/multiboot.h>
 #include <zephyr/arch/x86/efi.h>
 #include <x86_mmu.h>
+#include <zephyr/platform/hooks.h>
 
 extern FUNC_NORETURN void z_cstart(void);
 extern void x86_64_irq_init(void);
@@ -25,6 +26,9 @@ FUNC_NORETURN void z_prep_c(void *arg)
 {
 	x86_boot_arg_t *cpu_arg = arg;
 
+#if defined(CONFIG_SOC_PREP_HOOK)
+	soc_prep_hook();
+#endif
 	_kernel.cpus[0].nested = 0;
 
 #ifdef CONFIG_MMU
@@ -71,10 +75,6 @@ FUNC_NORETURN void z_prep_c(void *arg)
 	for (int i = 0; i < num_cpus; i++) {
 		z_x86_set_stack_guard(z_interrupt_stacks[i]);
 	}
-#endif
-
-#if defined(CONFIG_SMP)
-	arch_smp_init();
 #endif
 
 	z_cstart();

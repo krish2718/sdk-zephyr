@@ -6,21 +6,33 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <zephyr/kernel.h>
-#include <zephyr/sys/__assert.h>
-#include <zephyr/types.h>
-#include <zephyr/init.h>
-#include <stdlib.h>
+#include <errno.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+#include <sys/types.h>
 
+#include <zephyr/autoconf.h>
+#include <zephyr/bluetooth/att.h>
+#include <zephyr/bluetooth/audio/tbs.h>
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/gatt.h>
+#include <zephyr/bluetooth/uuid.h>
+#include <zephyr/init.h>
+#include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
+#include <zephyr/net_buf.h>
+#include <zephyr/sys/__assert.h>
+#include <zephyr/sys/byteorder.h>
+#include <zephyr/sys/util.h>
+#include <zephyr/sys/util_macro.h>
+#include <zephyr/types.h>
 
 #include "audio_internal.h"
 #include "tbs_internal.h"
 #include "ccid_internal.h"
-
-#include <zephyr/logging/log.h>
 
 LOG_MODULE_REGISTER(bt_tbs, CONFIG_BT_TBS_LOG_LEVEL);
 
@@ -73,7 +85,7 @@ struct gtbs_service_inst {
 #else
 #define READ_BUF_SIZE   (CONFIG_BT_TBS_MAX_CALLS * \
 			 sizeof(struct bt_tbs_current_call_item))
-#endif /* IS_ENABLED(CONFIG_BT_GTBS) */
+#endif /* defined(CONFIG_BT_GTBS) */
 NET_BUF_SIMPLE_DEFINE_STATIC(read_buf, READ_BUF_SIZE);
 
 static struct tbs_service_inst svc_insts[CONFIG_BT_TBS_BEARER_COUNT];
@@ -250,19 +262,23 @@ static bool uri_scheme_in_list(const char *uri_scheme,
 	return false;
 }
 
-static struct tbs_service_inst *lookup_inst_by_uri_scheme(const char *uri,
-							  uint8_t uri_len)
+static struct tbs_service_inst *lookup_inst_by_uri_scheme(const uint8_t *uri, uint8_t uri_len)
 {
 	char uri_scheme[CONFIG_BT_TBS_MAX_URI_LENGTH] = { 0 };
 
+	if (uri_len == 0) {
+		return NULL;
+	}
+
 	/* Look for ':' between the first and last char */
-	for (int i = 1; i < uri_len - 1; i++) {
+	for (uint8_t i = 1U; i < uri_len - 1U; i++) {
 		if (uri[i] == ':') {
 			(void)memcpy(uri_scheme, uri, i);
+			break;
 		}
 	}
 
-	if (strlen(uri_scheme) == 0) {
+	if (uri_scheme[0] == '\0') {
 		/* No URI scheme found */
 		return NULL;
 	}
@@ -333,8 +349,8 @@ static uint8_t next_free_call_index(void)
 	return BT_TBS_FREE_CALL_INDEX;
 }
 
-static struct bt_tbs_call *call_alloc(struct tbs_service_inst *inst, uint8_t state, const char *uri,
-				      uint16_t uri_len)
+static struct bt_tbs_call *call_alloc(struct tbs_service_inst *inst, uint8_t state,
+				      const uint8_t *uri, uint16_t uri_len)
 {
 	struct bt_tbs_call *free_call = NULL;
 
@@ -720,11 +736,12 @@ static ssize_t read_status_flags(struct bt_conn *conn,
 				 void *buf, uint16_t len, uint16_t offset)
 {
 	const struct service_inst *inst = BT_AUDIO_CHRC_USER_DATA(attr);
+	const uint16_t status_flags_le = sys_cpu_to_le16(inst->optional_opcodes);
 
 	LOG_DBG("Index %u: status_flags 0x%04x", inst_index(inst), inst->status_flags);
 
-	return bt_gatt_attr_read(conn, attr, buf, len, offset,
-				 &inst->status_flags, sizeof(inst->status_flags));
+	return bt_gatt_attr_read(conn, attr, buf, len, offset, &status_flags_le,
+				 sizeof(status_flags_le));
 }
 
 static void status_flags_cfg_changed(const struct bt_gatt_attr *attr,
@@ -1337,11 +1354,12 @@ static ssize_t read_optional_opcodes(struct bt_conn *conn,
 				     void *buf, uint16_t len, uint16_t offset)
 {
 	const struct service_inst *inst = BT_AUDIO_CHRC_USER_DATA(attr);
+	const uint16_t optional_opcodes_le = sys_cpu_to_le16(inst->optional_opcodes);
 
 	LOG_DBG("Index %u: Supported opcodes 0x%02x", inst_index(inst), inst->optional_opcodes);
 
-	return bt_gatt_attr_read(conn, attr, buf, len, offset,
-				 &inst->optional_opcodes, sizeof(inst->optional_opcodes));
+	return bt_gatt_attr_read(conn, attr, buf, len, offset, &optional_opcodes_le,
+				 sizeof(optional_opcodes_le));
 }
 
 static void terminate_reason_cfg_changed(const struct bt_gatt_attr *attr,
@@ -1727,7 +1745,7 @@ int bt_tbs_originate(uint8_t bearer_index, char *remote_uri,
 
 	if (tbs == NULL || inst_is_gtbs(tbs)) {
 		return -EINVAL;
-	} else if (!bt_tbs_valid_uri(remote_uri, strlen(remote_uri))) {
+	} else if (!bt_tbs_valid_uri((uint8_t *)remote_uri, strlen(remote_uri))) {
 		LOG_DBG("Invalid URI %s", remote_uri);
 		return -EINVAL;
 	}
@@ -1923,17 +1941,17 @@ int bt_tbs_remote_incoming(uint8_t bearer_index, const char *to,
 
 	if (inst == NULL || inst_is_gtbs(inst)) {
 		return -EINVAL;
-	} else if (!bt_tbs_valid_uri(to, strlen(to))) {
+	} else if (!bt_tbs_valid_uri((uint8_t *)to, strlen(to))) {
 		LOG_DBG("Invalid \"to\" URI: %s", to);
 		return -EINVAL;
-	} else if (!bt_tbs_valid_uri(from, strlen(from))) {
+	} else if (!bt_tbs_valid_uri((uint8_t *)from, strlen(from))) {
 		LOG_DBG("Invalid \"from\" URI: %s", from);
 		return -EINVAL;
 	}
 
 	service_inst = CONTAINER_OF(inst, struct tbs_service_inst, inst);
 
-	call = call_alloc(service_inst, BT_TBS_CALL_STATE_INCOMING, from, strlen(from));
+	call = call_alloc(service_inst, BT_TBS_CALL_STATE_INCOMING, (uint8_t *)from, strlen(from));
 	if (call == NULL) {
 		return -ENOMEM;
 	}
@@ -1979,8 +1997,7 @@ int bt_tbs_set_bearer_technology(uint8_t bearer_index, uint8_t new_technology)
 {
 	struct service_inst *inst = inst_lookup_index(bearer_index);
 
-	if (new_technology < BT_TBS_TECHNOLOGY_3G ||
-	    new_technology > BT_TBS_TECHNOLOGY_IP) {
+	if (new_technology < BT_TBS_TECHNOLOGY_3G || new_technology > BT_TBS_TECHNOLOGY_WCDMA) {
 		return -EINVAL;
 	} else if (inst == NULL) {
 		return -EINVAL;
