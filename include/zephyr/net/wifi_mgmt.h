@@ -1032,6 +1032,18 @@ struct wifi_dpp_params {
 
 #endif /* CONFIG_WIFI_NM_WPA_SUPPLICANT_DPP */
 
+/** Wi-Fi AP status
+ */
+enum wifi_hostapd_iface_state {
+	WIFI_HAPD_IFACE_UNINITIALIZED,
+	WIFI_HAPD_IFACE_DISABLED,
+	WIFI_HAPD_IFACE_COUNTRY_UPDATE,
+	WIFI_HAPD_IFACE_ACS,
+	WIFI_HAPD_IFACE_HT_SCAN,
+	WIFI_HAPD_IFACE_DFS,
+	WIFI_HAPD_IFACE_ENABLED
+};
+
 #include <zephyr/net/net_if.h>
 
 /** Scan result callback
