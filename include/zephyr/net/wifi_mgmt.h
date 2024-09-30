@@ -1028,6 +1028,7 @@ struct wifi_dpp_params {
 		char resp[WIFI_DPP_QRCODE_MAX_LEN + 1];
 	};
 };
+#endif /* CONFIG_WIFI_NM_WPA_SUPPLICANT_DPP */
 
 #endif /* CONFIG_WIFI_NM_WPA_SUPPLICANT_DPP */
 
