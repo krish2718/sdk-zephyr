@@ -162,6 +162,7 @@ config WIFI_NM_WPA_SUPPLICANT_CRYPTO_ALT
 	select MBEDTLS_MD_C
 	select MBEDTLS_CIPHER_PADDING_PKCS7
 	select MBEDTLS_TLS_VERSION_1_2
+	select MBEDTLS_NIST_KW_C
 
 config WIFI_NM_WPA_SUPPLICANT_CRYPTO_LEGACY_NCS
 	bool "Legacy Crypto support for WiFi using nRF security"
