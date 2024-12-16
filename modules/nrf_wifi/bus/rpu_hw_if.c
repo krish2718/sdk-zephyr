@@ -483,6 +483,8 @@ int rpu_enable(void)
 		goto rpu_pwroff;
 	}
 
+	k_msleep(10);
+
 /* TODO: rpu_validate_comms() needs firmware download to be done
  * successfully before it can be called. So, disable this for
  * nrf70_buslib only usage.
