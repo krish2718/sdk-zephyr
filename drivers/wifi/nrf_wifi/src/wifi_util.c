@@ -939,6 +939,7 @@ static int nrf_wifi_util_rpu_recovery_info(const struct shell *sh,
 
 	shell_fprintf(sh,
 		      SHELL_INFO,
+		      "rpu_not_ready_count: %d\n"
 		      "wdt_irq_received: %d\n"
 		      "wdt_irq_ignored: %d\n"
 		      "last_wakeup_now_asserted_time_ms: %lu milliseconds\n"
@@ -947,6 +948,7 @@ static int nrf_wifi_util_rpu_recovery_info(const struct shell *sh,
 		      "current time: %lu milliseconds\n"
 		      "rpu_recovery_success: %d\n"
 		      "rpu_recovery_failure: %d\n\n",
+		      hal_dev_ctx->rpu_not_ready_count,
 		      hal_dev_ctx->wdt_irq_received,
 		      hal_dev_ctx->wdt_irq_ignored,
 		      hal_dev_ctx->last_wakeup_now_asserted_time_ms,
