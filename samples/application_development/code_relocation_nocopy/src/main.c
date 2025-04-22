@@ -41,18 +41,34 @@ void disable_mpu_rasr_xn(void)
 
 extern void function_in_ext_flash(void);
 extern void function_in_sram(void);
-
-int main(void)
+#include "zephyr/drivers/flash/nrf_qspi_nor.h"
+static int test(void)
 {
+#if defined(CONFIG_NORDIC_QSPI_NOR)
+	const struct device *flash_dev = DEVICE_DT_GET(DT_INST(0, nordic_qspi_nor));
+#endif /* CONFIG_NRF_WIFI_PATCHES_EXT_FLASH_XIP */
+#if defined(CONFIG_NORDIC_QSPI_NOR)
+	nrf_qspi_nor_xip_enable(flash_dev, true);
+#endif /* CONFIG_NRF_WIFI */
 #ifdef CONFIG_ARM_MPU
 	disable_mpu_rasr_xn();
 #endif	/* CONFIG_ARM_MPU */
 
-	printk("Address of %s function %p\n", __func__, &main);
+	printk("Address of %s function %p\n", __func__, &test);
 
 	function_in_ext_flash();
 	function_in_sram();
 
 	printk("Hello World! %s\n", CONFIG_BOARD);
+#if defined(CONFIG_NORDIC_QSPI_NOR)
+	nrf_qspi_nor_xip_enable(flash_dev, false);
+#endif /* CONFIG_NRF_WIFI */
 	return 0;
+}
+
+int main(void)
+{
+	test();
+	k_sleep(K_SECONDS(2));
+	test();
 }

@@ -299,6 +299,8 @@ static void qspi_acquire(const struct device *dev)
 	struct qspi_nor_data *dev_data = dev->data;
 	int rc;
 
+	LOG_DBG("Acquiring QSPI device: %s", dev->name);
+
 	rc = pm_device_runtime_get(dev);
 	if (rc < 0) {
 		LOG_ERR("pm_device_runtime_get failed: %d", rc);
@@ -309,14 +311,18 @@ static void qspi_acquire(const struct device *dev)
 	 * only at the last call (usage_count == 0).
 	 */
 	atomic_inc(&dev_data->usage_count);
+	LOG_DBG("QSPI usage count incremented: %d", atomic_get(&dev_data->usage_count));
 #endif
 
 	qspi_lock(dev);
+	LOG_DBG("QSPI device locked");
 
 	if (!dev_data->xip_enabled) {
 		qspi_clock_div_change();
+		LOG_DBG("QSPI clock divider changed");
 
 		pm_device_busy_set(dev);
+		LOG_DBG("QSPI device marked as busy");
 	}
 }
 
@@ -326,22 +332,29 @@ static void qspi_release(const struct device *dev)
 	bool deactivate = true;
 	int rc;
 
+	LOG_DBG("Releasing QSPI device: %s", dev->name);
+
 #if defined(CONFIG_MULTITHREADING)
 	/* The last thread to finish using the driver deactivates the QSPI */
 	deactivate = atomic_dec(&dev_data->usage_count) == 1;
+	LOG_DBG("QSPI usage count decremented: %d", atomic_get(&dev_data->usage_count));
 #endif
 
 	if (!dev_data->xip_enabled) {
 		qspi_clock_div_restore();
+		LOG_DBG("QSPI clock divider restored");
 
 		if (deactivate) {
 			(void) nrfx_qspi_deactivate();
+			LOG_DBG("QSPI device deactivated");
 		}
 
 		pm_device_busy_clear(dev);
+		LOG_DBG("QSPI device marked as not busy");
 	}
 
 	qspi_unlock(dev);
+	LOG_DBG("QSPI device unlocked");
 
 	rc = pm_device_runtime_put(dev);
 	if (rc < 0) {
@@ -1348,19 +1361,26 @@ void z_impl_nrf_qspi_nor_xip_enable(const struct device *dev, bool enable)
 {
 	struct qspi_nor_data *dev_data = dev->data;
 
+	LOG_DBG("XIP enable requested: %d", enable);
+
 	if (dev_data->xip_enabled == enable) {
+		LOG_DBG("XIP already in the requested state: %d", enable);
 		return;
 	}
 
 	qspi_acquire(dev);
 
 #if NRF_QSPI_HAS_XIPEN
+	LOG_DBG("Setting XIP mode to: %d", enable);
 	nrf_qspi_xip_set(NRF_QSPI, enable);
 #endif
 	if (enable) {
+		LOG_DBG("Activating QSPI for XIP mode");
 		(void)nrfx_qspi_activate(false);
 	}
 	dev_data->xip_enabled = enable;
+
+	LOG_DBG("XIP mode set successfully to: %d", enable);
 
 	qspi_release(dev);
 }

@@ -65,6 +65,17 @@ zephyr_library_sources_ifdef(CONFIG_SOC_FLASH_TELINK_B91 soc_flash_b91.c)
 zephyr_library_sources_ifdef(CONFIG_SOC_FLASH_XMC4XXX soc_flash_xmc4xxx.c)
 zephyr_library_sources_ifdef(CONFIG_SPI_FLASH_AT45 spi_flash_at45.c)
 zephyr_library_sources_ifdef(CONFIG_SPI_NOR spi_nor.c)
+
+zephyr_compile_definitions_ifdef(CONFIG_NORDIC_QSPI_NOR
+# These are XIP related anomalies and aren't applicable for nRF7002 and cause
+# throughput issues.
+  -DNRF53_ERRATA_43_ENABLE_WORKAROUND=0
+  -DNRF52_ERRATA_215_ENABLE_WORKAROUND=0
+# nRF70 QSPI doesn't use 192MHz clock and most samples use 128MHz, this can cause anomaly 159
+# but as its rare and not seen in most cases, we can disable it.
+# Alternative is 128MHz CPU should be disabled that impacts Wi-Fi performance.
+  -DNRF53_ERRATA_159_ENABLE_WORKAROUND=0
+)
 # zephyr-keep-sorted-stop
 
 if(CONFIG_FLASH_SIMULATOR)
