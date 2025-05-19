@@ -5,9 +5,6 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-# TODO: Use DTS generated Kconfig once the board support is added
-DT_COMPAT_NORDIC_WIFI71 := nordic,wifi71
-
 menuconfig WIFI_NRF70
 	bool "nRF70 driver"
 	select NET_L2_WIFI_MGMT if NETWORKING
@@ -19,8 +16,7 @@ menuconfig WIFI_NRF70
 	depends on \
 		DT_HAS_NORDIC_NRF7002_SPI_ENABLED || DT_HAS_NORDIC_NRF7002_QSPI_ENABLED || \
 		DT_HAS_NORDIC_NRF7001_SPI_ENABLED || DT_HAS_NORDIC_NRF7001_QSPI_ENABLED || \
-		DT_HAS_NORDIC_NRF7000_SPI_ENABLED || DT_HAS_NORDIC_NRF7000_QSPI_ENABLED || \
-		$(dt_compat_enabled,$(DT_COMPAT_NORDIC_WIFI71))
+		DT_HAS_NORDIC_NRF7000_SPI_ENABLED || DT_HAS_NORDIC_NRF7000_QSPI_ENABLED
 	help
 	  Nordic Wi-Fi Driver
 
