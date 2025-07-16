@@ -142,4 +142,8 @@ int nrf_wifi_wpa_supp_sta_set_flags(void *if_priv, const u8 *addr,
 			unsigned int flags_and);
 int nrf_wifi_wpa_supp_sta_get_inact_sec(void *if_priv, const u8 *addr);
 #endif /* CONFIG_NRF70_AP_MODE */
+#ifdef CONFIG_NRF70_L2_PACKET
+int nrf_wifi_wpa_supp_send_l2_packet(void *if_priv, const u8 *dst_addr, u16 proto,
+				      const u8 *data, size_t data_len);
+#endif
 #endif /*  __ZEPHYR_WPA_SUPP_IF_H__ */

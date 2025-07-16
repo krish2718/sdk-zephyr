@@ -914,6 +914,9 @@ static struct zep_wpa_supp_dev_ops wpa_supp_ops = {
 	.sta_set_flags = nrf_wifi_wpa_supp_sta_set_flags,
 	.get_inact_sec = nrf_wifi_wpa_supp_sta_get_inact_sec,
 #endif /* CONFIG_NRF70_AP_MODE */
+#ifdef CONFIG_NRF70_L2_PACKET
+	.send_l2_packet = nrf_wifi_wpa_supp_send_l2_packet,
+#endif /* CONFIG_NRF70_L2_PACKET */
 };
 #endif /* CONFIG_NRF70_STA_MODE */
 #endif /* !CONFIG_NRF70_RADIO_TEST */

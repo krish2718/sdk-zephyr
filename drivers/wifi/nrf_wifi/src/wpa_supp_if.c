@@ -2838,22 +2838,108 @@ int nrf_wifi_wpa_supp_sta_get_inact_sec(void *if_priv, const u8 *addr)
 
 	status = nrf_wifi_sys_fmac_get_station(rpu_ctx_zep->rpu_ctx,
 					       vif_ctx_zep->vif_idx,
-					       (unsigned char *) addr);
+					       addr,
+					       &inactive_time_sec);
 	if (status != NRF_WIFI_STATUS_SUCCESS) {
 		LOG_ERR("%s: nrf_wifi_sys_fmac_get_station failed", __func__);
 		goto out;
 	}
 
-	sem_ret = k_sem_take(&wait_for_event_sem, K_MSEC(RPU_RESP_EVENT_TIMEOUT));
-	if (sem_ret) {
-		LOG_ERR("%s: Timed out to get station info, ret = %d", __func__, sem_ret);
-		ret = NRF_WIFI_STATUS_FAIL;
-		goto out;
-	}
+	ret = inactive_time_sec;
 
-	inactive_time_sec = vif_ctx_zep->inactive_time_sec;
 out:
 	k_mutex_unlock(&vif_ctx_zep->vif_lock);
-	return inactive_time_sec;
+	return ret;
 }
 #endif /* CONFIG_NRF70_AP_MODE */
+
+#ifdef CONFIG_NRF70_L2_PACKET
+#include <zephyr/net/ethernet.h>
+#include <zephyr/net/net_pkt.h>
+#include <zephyr/net/net_core.h>
+#include <zephyr/net/net_if.h>
+#include <string.h>
+
+int nrf_wifi_wpa_supp_send_l2_packet(void *if_priv, const u8 *dst_addr, u16 proto,
+                                     const u8 *data, size_t data_len)
+{
+    struct nrf_wifi_vif_ctx_zep *vif_ctx_zep = if_priv;
+    struct net_pkt *pkt = NULL;
+    int ret = -1;
+
+    if (!vif_ctx_zep || !dst_addr || !data || !data_len) {
+        LOG_ERR("%s: Invalid parameters", __func__);
+        return -EINVAL;
+    }
+
+    // Allocate packet with space for header + payload
+    pkt = net_pkt_alloc_with_buffer(vif_ctx_zep->zep_net_if_ctx,
+                                    sizeof(struct net_eth_hdr) + data_len,
+                                    AF_UNSPEC, 0, K_NO_WAIT);
+    if (!pkt) {
+        LOG_ERR("%s: Failed to allocate net_pkt", __func__);
+        return -ENOMEM;
+    }
+
+    // Set interface and priority
+    net_pkt_set_iface(pkt, vif_ctx_zep->zep_net_if_ctx);
+    net_pkt_set_priority(pkt, NET_PRIORITY_IC);
+
+    // Prepare Ethernet header in a local struct
+    struct net_eth_hdr eth_hdr;
+    memcpy(eth_hdr.dst.addr, dst_addr, ETH_ALEN);
+    memcpy(eth_hdr.src.addr, vif_ctx_zep->mac_addr.addr, ETH_ALEN);
+    eth_hdr.type = htons(proto);
+
+    // Write header first to ensure it's at the beginning
+    if (net_pkt_write(pkt, &eth_hdr, sizeof(struct net_eth_hdr))) {
+        LOG_ERR("%s: Failed to write Ethernet header", __func__);
+        net_pkt_unref(pkt);
+        return -EIO;
+    }
+
+    // Write payload after header
+    if (net_pkt_write(pkt, data, data_len)) {
+        LOG_ERR("%s: Failed to write payload", __func__);
+        net_pkt_unref(pkt);
+        return -EIO;
+    }
+
+    // Debug: Dump Ethernet header values
+    LOG_DBG("%s: ETH_HDR DST: %02x:%02x:%02x:%02x:%02x:%02x", __func__,
+             eth_hdr.dst.addr[0], eth_hdr.dst.addr[1], eth_hdr.dst.addr[2],
+             eth_hdr.dst.addr[3], eth_hdr.dst.addr[4], eth_hdr.dst.addr[5]);
+    LOG_DBG("%s: ETH_HDR SRC: %02x:%02x:%02x:%02x:%02x:%02x", __func__,
+             eth_hdr.src.addr[0], eth_hdr.src.addr[1], eth_hdr.src.addr[2],
+             eth_hdr.src.addr[3], eth_hdr.src.addr[4], eth_hdr.src.addr[5]);
+    LOG_DBG("%s: ETH_HDR TYPE: 0x%04x", __func__, ntohs(eth_hdr.type));
+
+    // Debug: Dump the actual packet data before sending
+    LOG_DBG("%s: Packet total len: %d", __func__, net_pkt_get_len(pkt));
+    LOG_DBG("%s: First fragment len: %d", __func__, pkt->buffer->len);
+
+    // Read back the first 14 bytes to see what's actually in the packet
+    uint8_t packet_start[14];
+    if (net_pkt_read(pkt, packet_start, 14) == 0) {
+        LOG_DBG("%s: PACKET START: %02x:%02x:%02x:%02x:%02x:%02x %02x:%02x:%02x:%02x:%02x:%02x %04x",
+                 __func__,
+                 packet_start[0], packet_start[1], packet_start[2], packet_start[3], packet_start[4], packet_start[5],
+                 packet_start[6], packet_start[7], packet_start[8], packet_start[9], packet_start[10], packet_start[11],
+                 (packet_start[12] << 8) | packet_start[13]);
+    }
+
+    // Reset packet cursor for actual send
+    net_pkt_cursor_init(pkt);
+
+    // Direct driver send
+    ret = nrf_wifi_if_send(vif_ctx_zep->zep_dev_ctx, pkt);
+    if (ret < 0) {
+        net_pkt_unref(pkt);
+        LOG_ERR("%s: Driver send failed: %d", __func__, ret);
+        return ret;
+    }
+
+    LOG_DBG("%s: L2 packet sent with high priority, len: %zu", __func__, data_len);
+    return 0;
+}
+#endif /* CONFIG_NRF70_L2_PACKET */

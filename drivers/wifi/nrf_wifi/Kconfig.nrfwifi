@@ -132,6 +132,24 @@ config NRF70_PROMISC_DATA_RX
 	select EXPERIMENTAL
 	select NET_PROMISCUOUS_MODE
 
+config NRF70_L2_PACKET
+	bool "nRF70 L2 packet high-priority transmission support (EXPERIMENTAL)"
+	depends on WIFI_NM_WPA_SUPPLICANT
+	select EXPERIMENTAL
+	help
+	  Enable driver support for high-priority transmission of L2 packets
+	  (EAPOL frames). This feature allows the driver to handle L2 packet
+	  transmission directly with Voice (VO) priority, bypassing the normal
+	  network stack for improved reliability.
+
+	  This is an experimental feature and may not be stable in all configurations.
+	  When enabled, the driver will support the send_l2_packet operation
+	  for high-priority transmission of EAPOL frames.
+
+	  Note: This option only enables the driver side of the feature.
+	  The supplicant/hostapd must also enable WIFI_NM_WPA_SUPPLICANT_L2_HIGH_PRIORITY
+	  for the feature to be used.
+
 config NRF70_DATA_TX
 	bool
 endif # NRF70_SYSTEM_MODE
