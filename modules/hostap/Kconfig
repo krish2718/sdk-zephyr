@@ -596,4 +596,20 @@ config WIFI_NM_WPA_CTRL_RESP_TIMEOUT_S
 	  Timeout for the control interface commands to get a response from the
 	  supplicant.
 
+config WIFI_NM_WPA_SUPPLICANT_L2_PKT_DIRECT
+	bool "L2 packet high-priority transmission (EXPERIMENTAL)"
+	select EXPERIMENTAL
+	help
+	  Enable high-priority transmission of L2 packets (EAPOL frames) through
+	  the driver instead of using socket-based transmission. This feature
+	  bypasses the normal network stack and sends packets directly to the
+	  Wi-Fi hardware with Voice (VO) priority for improved reliability.
+
+	  This is an experimental feature and may not be stable in all configurations.
+	  When enabled, EAPOL frames will be transmitted with higher priority
+	  to improve authentication performance.
+
+	  Note: This option only enables the supplicant/hostapd side of the feature.
+	  The driver must also support this feature for it to work.
+
 endif # WIFI_NM_WPA_SUPPLICANT
