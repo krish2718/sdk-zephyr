@@ -37,6 +37,12 @@ static struct qspi_dev qspi = {.init = qspi_init,
 			       .read = qspi_read,
 			       .write = qspi_write,
 			       .hl_read = qspi_hl_read};
+#elif defined(CONFIG_NRF70_ON_SQSPI)
+static struct qspi_dev sqspi = {.init = sqspi_init,
+				.deinit = sqspi_deinit,
+				.read = sqspi_read,
+				.write = sqspi_write,
+				.hl_read = sqspi_hl_read};
 #else
 static struct qspi_dev spim = {.init = spim_init,
 			       .deinit = spim_deinit,
@@ -51,6 +57,10 @@ struct qspi_config *qspi_defconfig(void)
 	memset(&config, 0, sizeof(struct qspi_config));
 #if defined(CONFIG_NRF70_ON_QSPI)
 	config.addrmode = NRF_QSPI_ADDRMODE_24BIT;
+	config.RDC4IO = 0xA0;
+	config.easydma = true;
+	config.quad_spi = true;
+#elif defined(CONFIG_NRF70_ON_SQSPI)
 	config.RDC4IO = 0xA0;
 	config.easydma = true;
 	config.quad_spi = true;
@@ -90,6 +100,8 @@ struct qspi_dev *qspi_dev(void)
 {
 #if defined(CONFIG_NRF70_ON_QSPI)
 	return &qspi;
+#elif defined(CONFIG_NRF70_ON_SQSPI)
+	return &sqspi;
 #else
 	return &spim;
 #endif

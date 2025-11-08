@@ -30,9 +30,6 @@
 	ranges = <0x0 0x20000000 DT_SIZE_K(415)>;
 };
 
-&uart30 {
-	status = "reserved";
-};
 
 &cpuflpr_vpr {
 	execution-memory = <&cpuflpr_sram_code_data>;

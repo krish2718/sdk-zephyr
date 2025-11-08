@@ -49,6 +49,10 @@ if (CONFIG_NRF70_BUSLIB)
     rpu_hw_if.c
     qspi_if.c
   )
+  zephyr_library_sources_ifdef(CONFIG_NRF70_ON_SQSPI
+    rpu_hw_if.c
+    sqspi_if.c
+  )
   zephyr_library_sources_ifdef(CONFIG_NRF70_ON_SPI
     rpu_hw_if.c
     spi_if.c

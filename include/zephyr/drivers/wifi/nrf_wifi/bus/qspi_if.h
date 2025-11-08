@@ -64,15 +64,21 @@ struct qspi_dev {
 
 int qspi_cmd_wakeup_rpu(const struct device *dev, uint8_t data);
 
+#ifdef CONFIG_NRF70_ON_QSPI
 int qspi_init(struct qspi_config *config);
-
 int qspi_write(unsigned int addr, const void *data, int len);
-
 int qspi_read(unsigned int addr, void *data, int len);
-
 int qspi_hl_read(unsigned int addr, void *data, int len);
-
 int qspi_deinit(void);
+#endif
+
+#ifdef CONFIG_NRF70_ON_SQSPI
+int sqspi_init(struct qspi_config *config);
+int sqspi_write(unsigned int addr, const void *data, int len);
+int sqspi_read(unsigned int addr, void *data, int len);
+int sqspi_hl_read(unsigned int addr, void *data, int len);
+int sqspi_deinit(void);
+#endif
 
 void gpio_free_irq(int pin, struct gpio_callback *button_cb_data);
 
@@ -88,16 +94,32 @@ int qspi_cmd_sleep_rpu(const struct device *dev);
 void hard_reset(void);
 void get_sleep_stats(uint32_t addr, uint32_t *buff, uint32_t wrd_len);
 
+#ifdef CONFIG_NRF70_ON_QSPI
 extern struct device qspi_perip;
+#endif
+#ifdef CONFIG_NRF70_ON_SQSPI
+extern struct device sqspi_perip;
+#endif
 
+#ifdef CONFIG_NRF70_ON_QSPI
 int qspi_validate_rpu_wake_writecmd(const struct device *dev);
 int qspi_cmd_wakeup_rpu(const struct device *dev, uint8_t data);
 int qspi_wait_while_rpu_awake(const struct device *dev);
-
 int qspi_RDSR1(const struct device *dev, uint8_t *rdsr1);
 int qspi_RDSR2(const struct device *dev, uint8_t *rdsr2);
 int qspi_WRSR2(const struct device *dev, const uint8_t wrsr2);
+#endif
+#ifdef CONFIG_NRF70_ON_SQSPI
+int sqspi_validate_rpu_wake_writecmd(const struct device *dev);
+int sqspi_cmd_wakeup_rpu(const struct device *dev, uint8_t data);
+int sqspi_cmd_sleep_rpu(const struct device *dev);
+int sqspi_wait_while_rpu_awake(const struct device *dev);
+int sqspi_RDSR1(const struct device *dev, uint8_t *rdsr1);
+int sqspi_RDSR2(const struct device *dev, uint8_t *rdsr2);
+int sqspi_WRSR2(const struct device *dev, uint8_t data);
+#endif
 
+#ifdef CONFIG_NRF70_ON_QSPI
 /**
  * @brief Read a register via QSPI
  *
@@ -117,6 +139,28 @@ int qspi_read_reg(const struct device *dev, uint8_t reg_addr, uint8_t *reg_value
  * @return int 0 on success, negative error code on failure
  */
 int qspi_write_reg(const struct device *dev, uint8_t reg_addr, uint8_t reg_value);
+#endif
+#ifdef CONFIG_NRF70_ON_SQSPI
+/**
+ * @brief Read a register via sQSPI
+ *
+ * @param dev sQSPI device
+ * @param reg_addr Register address (opcode)
+ * @param reg_value Pointer to store the read value
+ * @return int 0 on success, negative error code on failure
+ */
+int sqspi_read_reg(const struct device *dev, uint8_t reg_addr, uint8_t *reg_value);
+
+/**
+ * @brief Write a register via sQSPI
+ *
+ * @param dev sQSPI device
+ * @param reg_addr Register address (opcode)
+ * @param reg_value Value to write
+ * @return int 0 on success, negative error code on failure
+ */
+int sqspi_write_reg(const struct device *dev, uint8_t reg_addr, uint8_t reg_value);
+#endif
 
 #ifdef CONFIG_NRF_WIFI_LOW_POWER
 int func_rpu_sleep(void);
