@@ -262,7 +262,7 @@ static void ping_work(struct k_work *work)
 	if (ctx->sequence < ctx->count) {
 		k_work_reschedule(&ctx->work, K_MSEC(ctx->interval));
 	} else {
-		k_work_reschedule(&ctx->work, K_SECONDS(2));
+		k_work_reschedule(&ctx->work, K_MSEC(100));
 	}
 
 	params.identifier = sys_rand32_get();

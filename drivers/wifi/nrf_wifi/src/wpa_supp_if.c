@@ -9,6 +9,7 @@
  * Zephyr OS layer of the Wi-Fi driver.
  */
 #include <stdlib.h>
+#include <errno.h>
 
 #include <zephyr/device.h>
 #include <zephyr/logging/log.h>
@@ -18,6 +19,9 @@
 #include "wifi_mgmt.h"
 #include "wpa_supp_if.h"
 #include <system/fmac_peer.h>
+
+#include <psa/crypto.h>
+#include "wifi_crypto.h"
 
 LOG_MODULE_DECLARE(wifi_nrf, CONFIG_WIFI_NRF70_LOG_LEVEL);
 
@@ -964,6 +968,99 @@ out:
 	return ret;
 }
 
+/**
+ * @brief Determine if cipher suite is for MIC (management frame protection)
+ *
+ * @param suite Cipher suite value
+ *
+ * @return true if MIC key, false if ENC key
+ */
+static bool is_mic_cipher_suite(unsigned int suite)
+{
+	return (suite == RSN_CIPHER_SUITE_AES_128_CMAC ||
+		suite == RSN_CIPHER_SUITE_BIP_GMAC_128 ||
+		suite == RSN_CIPHER_SUITE_BIP_GMAC_256 ||
+		suite == RSN_CIPHER_SUITE_BIP_CMAC_256);
+}
+
+/**
+ * @brief Install key to CRACEN KMU using PSA APIs
+ *
+ * @param suite Cipher suite value
+ * @param key Key data to install
+ * @param key_len Size of the key
+ * @param addr MAC address (NULL or broadcast for group keys, unicast for
+ *             pairwise keys)
+ * @param key_idx Key index
+ * @param db_id Database ID (peer ID)
+ *
+ * @return 0 on success, negative error code on failure
+ */
+static int wifi_install_key_to_crypto(unsigned int suite, const unsigned char *key, size_t key_len,
+				      const unsigned char *addr, int key_idx, uint32_t db_id)
+{
+	static unsigned int num_installed_keys;
+	wifi_crypto_key_type_t type;
+	psa_key_attributes_t attr;
+	psa_key_id_t key_id;
+	psa_status_t status;
+	uint32_t key_index;
+	uint32_t expected_key_len;
+	bool is_broadcast = false;
+
+	/* Determine if this is a broadcast/group key or unicast/pairwise key */
+	if (addr && is_broadcast_ether_addr(addr)) {
+		is_broadcast = true;
+	}
+
+	/* Determine key type based on cipher suite and address */
+	if (is_mic_cipher_suite(suite)) {
+		type = is_broadcast ? PEER_BCST_MIC : PEER_UCST_MIC;
+	} else {
+		type = is_broadcast ? PEER_BCST_ENC : PEER_UCST_ENC;
+	}
+
+	/* Get expected key size for the key type */
+	expected_key_len = wifi_crypto_get_key_size_in_bytes(type);
+	if (key_len != expected_key_len) {
+		LOG_ERR("%s: Key length mismatch: expected %u, got %zu", __func__,
+			expected_key_len, key_len);
+		return -EINVAL;
+	}
+
+	/* Convert key_idx to uint32_t, ensure it's within valid range */
+	if (key_idx < 0) {
+		key_index = 0;
+	} else {
+		key_index = (uint32_t)key_idx;
+	}
+
+	/* Initialize PSA key attributes */
+	attr = wifi_crypto_key_attributes_init(type, db_id, key_index);
+
+	LOG_INF("%s: Importing key %d to PSA (suite: 0x%08x, type: %d, len: %d)", __func__, num_installed_keys+1,
+		suite, type, key_len);
+
+		psa_key_lifetime_t lifetime = psa_get_key_lifetime(&attr);
+		psa_key_location_t location = PSA_KEY_LIFETIME_GET_LOCATION(lifetime);
+		psa_key_persistence_t persistence = PSA_KEY_LIFETIME_GET_PERSISTENCE(lifetime);
+		mbedtls_svc_key_id_t keyid = psa_get_key_id(&attr);
+	
+		LOG_INF("1 Importing key to PSA, location: %d, persistence: %d, lifetime: %d key: 0x%08X", location, persistence, lifetime, keyid);	
+	/* Import key to PSA */
+	status = psa_import_key(&attr, key, key_len, &key_id);
+	if (status != PSA_SUCCESS) {
+		LOG_ERR("%s: Failed to import key to PSA: %d", __func__, status);
+		return -EIO;
+	}
+	num_installed_keys++;
+	LOG_DBG("%s: Key imported successfully %d (suite: 0x%08x, type: %d)", __func__,num_installed_keys,
+		suite, type);
+
+
+	return 0;
+}
+
 int nrf_wifi_wpa_supp_set_key(void *if_priv, const unsigned char *ifname, enum wpa_alg alg,
 			      const unsigned char *addr, int key_idx, int set_tx,
 			      const unsigned char *seq, size_t seq_len, const unsigned char *key,
@@ -972,10 +1069,12 @@ int nrf_wifi_wpa_supp_set_key(void *if_priv, const unsigned char *ifname, enum w
 	enum nrf_wifi_status status = NRF_WIFI_STATUS_FAIL;
 	struct nrf_wifi_vif_ctx_zep *vif_ctx_zep = NULL;
 	struct nrf_wifi_ctx_zep *rpu_ctx_zep = NULL;
-	struct nrf_wifi_umac_key_info key_info;
+	struct nrf_wifi_umac_key_info key_info = {0};
 	const unsigned char *mac_addr = NULL;
 	unsigned int suite;
 	int ret = -1;
+
+	return 0;
 
 
 	if ((!if_priv) || (!ifname)) {
@@ -1011,8 +1110,15 @@ int nrf_wifi_wpa_supp_set_key(void *if_priv, const unsigned char *ifname, enum w
 		if (!suite) {
 			goto out;
 		}
-
+#ifdef CONFIG_NRF71_ON_IPC
+		ret = wifi_install_key_to_crypto(suite, key, key_len, addr, key_idx, 0);
+		if (ret) {
+			LOG_ERR("%s: Failed to install key to crypto: %d", __func__, ret);
+			goto out;
+		}
+#else
 		memcpy(key_info.key.nrf_wifi_key, key, key_len);
+#endif
 
 		key_info.key.nrf_wifi_key_len = key_len;
 		key_info.cipher_suite = suite;
