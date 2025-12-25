@@ -19,9 +19,10 @@
 #include "wifi_mgmt.h"
 #include "wpa_supp_if.h"
 #include <system/fmac_peer.h>
-
+#ifdef CONFIG_PSA_CRYPTO_DRIVER_WIFI_CRYPTO
 #include <psa/crypto.h>
 #include "wifi_crypto.h"
+#endif
 
 LOG_MODULE_DECLARE(wifi_nrf, CONFIG_WIFI_NRF70_LOG_LEVEL);
 
@@ -982,7 +983,7 @@ static bool is_mic_cipher_suite(unsigned int suite)
 		suite == RSN_CIPHER_SUITE_BIP_GMAC_256 ||
 		suite == RSN_CIPHER_SUITE_BIP_CMAC_256);
 }
-
+#ifdef CONFIG_PSA_CRYPTO_DRIVER_WIFI_CRYPTO
 /**
  * @brief Install key to CRACEN KMU using PSA APIs
  *
@@ -1060,6 +1061,7 @@ static int wifi_install_key_to_crypto(unsigned int suite, const unsigned char *k
 
 	return 0;
 }
+#endif
 
 int nrf_wifi_wpa_supp_set_key(void *if_priv, const unsigned char *ifname, enum wpa_alg alg,
 			      const unsigned char *addr, int key_idx, int set_tx,
@@ -1111,11 +1113,13 @@ int nrf_wifi_wpa_supp_set_key(void *if_priv, const unsigned char *ifname, enum w
 			goto out;
 		}
 #ifdef CONFIG_NRF71_ON_IPC
+#ifdef CONFIG_PSA_CRYPTO_DRIVER_WIFI_CRYPTO
 		ret = wifi_install_key_to_crypto(suite, key, key_len, addr, key_idx, 0);
 		if (ret) {
 			LOG_ERR("%s: Failed to install key to crypto: %d", __func__, ret);
 			goto out;
 		}
+#endif
 #else
 		memcpy(key_info.key.nrf_wifi_key, key, key_len);
 #endif
@@ -1597,6 +1601,10 @@ int nrf_wifi_nl80211_send_mlme(void *if_priv, const u8 *data,
 
 	LOG_DBG("%s: Sending frame to RPU: cookie=%d wait_time=%d no_ack=%d", __func__,
 		    cookie, wait_time, noack);
+	if (mgmt_tx_info->frame.frame_len > 0) {
+		LOG_HEXDUMP_INF(mgmt_tx_info->frame.frame, mgmt_tx_info->frame.frame_len, "Mgmt frame");
+	}
+
 	status = nrf_wifi_sys_fmac_mgmt_tx(rpu_ctx_zep->rpu_ctx,
 			vif_ctx_zep->vif_idx,
 			mgmt_tx_info);
@@ -1882,6 +1890,9 @@ void nrf_wifi_wpa_supp_event_mgmt_rx_callbk_fn(void *if_priv,
 		LOG_ERR("%s: Missing MLME event data", __func__);
 		return;
 	}
+
+	if (mlme_event->frame.frame_len)
+		LOG_HEXDUMP_INF(mlme_event->frame.frame, mlme_event->frame.frame_len, "RX MLME FRAME");
 
 	if (vif_ctx_zep->supp_drv_if_ctx && vif_ctx_zep->supp_callbk_fns.mgmt_rx) {
 		vif_ctx_zep->supp_callbk_fns.mgmt_rx(vif_ctx_zep->supp_drv_if_ctx,

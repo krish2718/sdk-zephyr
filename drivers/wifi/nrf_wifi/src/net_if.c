@@ -283,6 +283,9 @@ void nrf_wifi_if_rx_frm(void *os_vif_ctx, void *frm)
 		host_stats->total_rx_drop_pkts++;
 		net_pkt_unref(pkt);
 	}
+
+	/* Dump received frame */
+	LOG_HEXDUMP_INF(net_pkt_data(pkt), net_pkt_get_len(pkt), "RX FRAME DUMP");
 }
 
 enum nrf_wifi_status nrf_wifi_if_carr_state_chg(void *os_vif_ctx,
@@ -389,6 +392,8 @@ int nrf_wifi_if_send(const struct device *dev,
 	unsigned char *ra = NULL;
 	int peer_id = -1;
 	bool authorized;
+	size_t pkt_len;
+	uint8_t tmp_buf[pkt_len];
 
 	if (!dev || !pkt) {
 		LOG_ERR("%s: vif_ctx_zep is NULL", __func__);
@@ -400,6 +405,14 @@ int nrf_wifi_if_send(const struct device *dev,
 	if (!vif_ctx_zep) {
 		LOG_ERR("%s: vif_ctx_zep is NULL", __func__);
 		goto out;
+	}
+
+	
+
+	if (net_pkt_read(pkt, tmp_buf, pkt_len) == 0) {
+		LOG_HEXDUMP_INF(tmp_buf, pkt_len, "TX FRAME DUMP");
+	} else {
+		LOG_ERR("%s: Failed to linearize net_pkt", __func__);
 	}
 
 	/* Allocate packet before locking mutex (blocks until allocation success) */
@@ -466,6 +479,7 @@ int nrf_wifi_if_send(const struct device *dev,
 			ret = -EPERM;
 			goto drop;
 		}
+		
 		ret = nrf_wifi_fmac_start_xmit(rpu_ctx_zep->rpu_ctx,
 					       vif_ctx_zep->vif_idx,
 					       nbuf);
