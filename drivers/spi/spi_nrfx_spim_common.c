@@ -50,20 +50,17 @@ void spi_nrfx_spim_common_cs_set(const struct device *dev, const struct spi_conf
 	struct spi_nrfx_common_data *dev_data = dev->data;
 	NRF_SPIM_Type *spim_reg = dev_data->spim.p_reg;
 
-	/*
-	 * Enable the SPIM peripheral so it drives the SPI bus, ensuring correct initial bus state
-	 * before transfer starts, and setting CS if its controlled by the SPIM peripheral.
-	 */
-	nrfy_spim_enable(spim_reg);
+	if (spi_cfg->cs.cs_is_gpio == false && NRF_SPIM_IS_320MHZ_SPIM(spim_reg) == false) {
+		return;
+	}
 
 	if (spi_cfg->cs.cs_is_gpio) {
 		gpio_pin_set_dt(&spi_cfg->cs.gpio, 1);
+	} else {
+		nrfy_spim_enable(spim_reg);
 	}
 
-	/* Wait only if we control the CS pin */
-	if (spi_cfg->cs.cs_is_gpio || NRF_SPIM_IS_320MHZ_SPIM(spim_reg)) {
-		k_busy_wait(spi_cfg->cs.delay);
-	}
+	k_busy_wait(spi_cfg->cs.delay);
 }
 
 void spi_nrfx_spim_common_cs_clear(const struct device *dev, const struct spi_config *spi_cfg)
@@ -71,20 +68,17 @@ void spi_nrfx_spim_common_cs_clear(const struct device *dev, const struct spi_co
 	struct spi_nrfx_common_data *dev_data = dev->data;
 	NRF_SPIM_Type *spim_reg = dev_data->spim.p_reg;
 
-	/* Wait only if we control the CS pin */
-	if (spi_cfg->cs.cs_is_gpio || NRF_SPIM_IS_320MHZ_SPIM(spim_reg)) {
-		k_busy_wait(spi_cfg->cs.delay);
+	if (spi_cfg->cs.cs_is_gpio == false && NRF_SPIM_IS_320MHZ_SPIM(spim_reg) == false) {
+		return;
 	}
+
+	k_busy_wait(spi_cfg->cs.delay);
 
 	if (spi_cfg->cs.cs_is_gpio) {
 		gpio_pin_set_dt(&spi_cfg->cs.gpio, 0);
+	} else {
+		nrfy_spim_disable(spim_reg);
 	}
-
-	/*
-	 * Disable the SPIM peripheral so it no longer drives the SPI bus, clearing CS if its
-	 * controlled by the SPIM peripheral.
-	 */
-	nrfy_spim_disable(spim_reg);
 }
 
 static void evt_handler(nrfx_spim_event_t const *evt, void *data)
@@ -573,11 +567,21 @@ int spi_nrfx_spim_common_configure(const struct device *dev, const struct spi_co
 	spim_cfg.skip_gpio_cfg = true;
 	spim_cfg.skip_psel_cfg = true;
 
-	if (dev_data->configured) {
-		ret = nrfx_spim_reconfigure(&dev_data->spim, &spim_cfg);
-	} else {
-		ret = nrfx_spim_init(&dev_data->spim, &spim_cfg, evt_handler, (void *)dev);
+	{
+		uint32_t sck_pin = nrfy_spim_sck_pin_get(dev_data->spim.p_reg);
+
+		if (sck_pin != NRF_SPIM_PIN_NOT_CONNECTED) {
+			nrfy_gpio_pin_write(sck_pin,
+				(spi_cfg->operation & SPI_MODE_CPOL) ? 1 : 0);
+		}
 	}
+
+	if (dev_data->configured) {
+		nrfx_spim_uninit(&dev_data->spim);
+		dev_data->configured = false;
+	}
+
+	ret = nrfx_spim_init(&dev_data->spim, &spim_cfg, evt_handler, (void *)dev);
 
 	if (ret) {
 		LOG_ERR("Failed to configure nrfx driver: %d", ret);
@@ -815,6 +819,9 @@ int spi_nrfx_spim_common_init(const struct device *dev)
 	if (ret) {
 		return ret;
 	}
+
+	/* Pre-1a4692a1281: seed pinctrl; ignored if sleep state is stripped. */
+	(void)pinctrl_apply_state(dev_config->pcfg, PINCTRL_STATE_SLEEP);
 
 	return 0;
 }

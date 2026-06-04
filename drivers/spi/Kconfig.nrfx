@@ -21,6 +21,20 @@ config SPI_NRFX_SPIM
 	def_bool y
 	depends on DT_HAS_NORDIC_NRF_SPIM_ENABLED
 	depends on !SPI_RTIO
+
+config SPI_NRFX_SPIM_LEGACY
+	bool "Legacy monolithic nrfx SPIM driver (pre-common refactor)"
+	default n
+	depends on SPI_NRFX_SPIM
+	select NRFX_SPIM
+	help
+	  Use the monolithic SPI driver from before the spi_nrfx_spim_common
+	  refactor. Needed on nRF91 with GPIO chip select (nRF7002 EK) when
+	  CONFIG_PM_DEVICE is disabled.
+
+config SPI_NRFX_SPIM_COMMON
+	def_bool SPI_NRFX_SPIM
+	depends on !SPI_NRFX_SPIM_LEGACY
 	select NRFX_SPIM
 
 config SPI_NRFX_SPIM_RTIO
