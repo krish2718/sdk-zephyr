@@ -47,7 +47,12 @@ zephyr_library_compile_definitions(
   CONFIG_CTRL_IFACE_ZEPHYR
   CONFIG_SUITEB192
   CONFIG_SUITEB
-  # Though MbedTLS is not FIPS compliant, we don't want to use broken crypto algorithms
+)
+
+# Though MbedTLS is not FIPS compliant, CONFIG_FIPS is used here to strip the
+# broken/legacy crypto call sites (HMAC-MD5, RC4, ...) and keep the default
+# build robust. Legacy WPA/TKIP interop explicitly opts out of this.
+zephyr_library_compile_definitions_ifndef(CONFIG_WIFI_NM_WPA_SUPPLICANT_LEGACY_CRYPTO
   CONFIG_FIPS
 )
 

@@ -160,6 +160,28 @@ endif
 config WIFI_NM_WPA_SUPPLICANT_WEP
 	bool "WEP (Legacy crypto) support"
 
+config WIFI_NM_WPA_SUPPLICANT_LEGACY_CRYPTO
+	bool "Legacy (non-FIPS) crypto for backward compatibility"
+	help
+	  Drop CONFIG_FIPS from the supplicant build to re-enable the legacy
+	  and broken crypto call sites. By default the build is compiled with
+	  CONFIG_FIPS, which is not about real FIPS validation (MbedTLS is not
+	  FIPS validated) but is used as a switch to strip these algorithms and
+	  keep the default build robust.
+
+	  This is NOT a TKIP-only switch. Enabling it disables CONFIG_FIPS
+	  wholesale, so the whole legacy crypto surface comes back, including:
+	    - WPA1/TKIP EAPOL-Key descriptor version 1 (HMAC-MD5 4-way MIC and
+	      RC4 group-key unwrap)
+	    - MD5/RC4/DES based paths (e.g. EAP-FAST key export, IKEv2 MD5 PRF,
+	      EAP-PWD MD5)
+
+	  The main reason to enable it is interoperability with legacy
+	  WPA-PSK/TKIP access points still seen in the field and legacy
+	  interop/QuickTrack test cases. TKIP is deprecated and not allowed in
+	  current Wi-Fi Alliance certification programs, so leave this off
+	  unless the backward compatibility is actually required.
+
 choice WIFI_NM_WPA_SUPPLICANT_CRYPTO_BACKEND
 	prompt "WPA supplicant crypto implementation"
 	default WIFI_NM_WPA_SUPPLICANT_CRYPTO_ALT
