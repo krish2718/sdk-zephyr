@@ -200,6 +200,34 @@ static void antsw_setup(void)
 #endif /* DT_HAS_COMPAT_STATUS_OKAY(nordic_nrf71_wifi_antsw) */
 
 /*
+ * CLOCK is a split-security peripheral, so the XOSTART task and XOSTARTED event must be reached
+ * through the alias matching the domain that owns CLOCK when this code runs. The Zephyr secure
+ * image drives it through the _S alias, while the non-Zephyr (TF-M) build runs after CLOCK has
+ * been handed to the non-secure domain and must use the _NS alias to avoid a secure bus fault.
+ */
+#if defined(__ZEPHYR__)
+#define NRF_CLOCK_REG NRF_CLOCK_S
+#else
+#define NRF_CLOCK_REG NRF_CLOCK_NS
+#endif
+
+/*
+ * Start the HFXO once it has been configured. The crystal oscillator is started through the
+ * CLOCK peripheral (XOSTART task), not through HFXO64M itself, and CLOCK reports readiness via
+ * the XOSTARTED event. Both are modelled by the MDK, so use the generated symbols here.
+ */
+static void hfxo64m_start(void)
+{
+	NRF_CLOCK_REG->EVENTS_XOSTARTED = 0;
+	NRF_CLOCK_REG->TASKS_XOSTART =
+		(CLOCK_TASKS_XOSTART_TASKS_XOSTART_Trigger << CLOCK_TASKS_XOSTART_TASKS_XOSTART_Pos);
+
+	/* Wait until the crystal has started. */
+	while (NRF_CLOCK_REG->EVENTS_XOSTARTED == 0) {
+	}
+}
+
+/*
  * OSCILLATORS.PLL.DBG.REQUESTMODE, a retained debug register not covered by the MDK
  * (NRF_OSCILLATORS_Type only exposes PLL.FREQ/CURRENTFREQ at 0x800/0x804). Forcing this
  * mode drives PLL_VHF straight from the Wi-Fi core's own RF clock request, without going
@@ -215,6 +243,8 @@ static void pll_dbg_requestmode_force(void)
 	OSCILLATORS_REG_PLL_DBG_REQUESTMODE = OSCILLATORS_PLL_DBG_REQUESTMODE_VAL;
 	__DSB();
 }
+
+
 
 static void wifi_setup(void)
 {
@@ -249,8 +279,7 @@ int nordicsemi_nrf71_init(void)
 	ipct_configuration();
 #endif
 
-#if (defined(NRF_APPLICATION) && !defined(CONFIG_TRUSTED_EXECUTION_NONSECURE)) || \
-	!defined(__ZEPHYR__)
+
 #if defined(CONFIG_SOC_NRF7120_WICR_SETUP)
 	int ret = wicr_setup();
 
@@ -270,13 +299,12 @@ int nordicsemi_nrf71_init(void)
 	/* Steer the (now powered) antenna switch towards WLAN before Wi-Fi boot. */
 	antsw_setup();
 #endif
-
+	//hfxo64m_start();
 	/* Force PLL_VHF from the Wi-Fi core's own RF clock request; skips CLOCK.TASKS_XOSTART. */
 	pll_dbg_requestmode_force();
 
 	wifi_setup();
 #endif /* CONFIG_SOC_NRF71_WIFI_BOOT */
-#endif /* (NRF_APPLICATION && !CONFIG_TRUSTED_EXECUTION_NONSECURE) || !__ZEPHYR__ */
 
 	/* Configure LFXO capacitive load if internal load capacitors are used */
 #if DT_ENUM_HAS_VALUE(LFXO_NODE, load_capacitors, internal)
