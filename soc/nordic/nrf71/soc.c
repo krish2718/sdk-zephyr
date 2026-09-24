@@ -199,6 +199,23 @@ static void antsw_setup(void)
 }
 #endif /* DT_HAS_COMPAT_STATUS_OKAY(nordic_nrf71_wifi_antsw) */
 
+/*
+ * OSCILLATORS.PLL.DBG.REQUESTMODE, a retained debug register not covered by the MDK
+ * (NRF_OSCILLATORS_Type only exposes PLL.FREQ/CURRENTFREQ at 0x800/0x804). Forcing this
+ * mode drives PLL_VHF straight from the Wi-Fi core's own RF clock request, without going
+ * through CLOCK.TASKS_XOSTART at all.
+ */
+#define OSCILLATORS_REG(offset) \
+	(*(volatile uint32_t *)((uintptr_t)NRF_OSCILLATORS + (offset)))
+#define OSCILLATORS_REG_PLL_DBG_REQUESTMODE	OSCILLATORS_REG(0x834UL)
+#define OSCILLATORS_PLL_DBG_REQUESTMODE_VAL	(0x4UL)
+
+static void pll_dbg_requestmode_force(void)
+{
+	OSCILLATORS_REG_PLL_DBG_REQUESTMODE = OSCILLATORS_PLL_DBG_REQUESTMODE_VAL;
+	__DSB();
+}
+
 static void wifi_setup(void)
 {
 	/* Kickstart the LMAC processor */
@@ -253,6 +270,9 @@ int nordicsemi_nrf71_init(void)
 	/* Steer the (now powered) antenna switch towards WLAN before Wi-Fi boot. */
 	antsw_setup();
 #endif
+
+	/* Force PLL_VHF from the Wi-Fi core's own RF clock request; skips CLOCK.TASKS_XOSTART. */
+	pll_dbg_requestmode_force();
 
 	wifi_setup();
 #endif /* CONFIG_SOC_NRF71_WIFI_BOOT */
